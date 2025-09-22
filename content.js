@@ -65,7 +65,7 @@ const createNoteElement = (id, note) => {
   noteContent.setAttribute('contenteditable', 'true');
   noteContent.innerText = note.content;
   noteContent.addEventListener('input', (e) =>
-    updateNoteContent(id, e.target.innerText),
+    updateNoteContent(id, /** @type {HTMLDivElement} */ (e.target).innerText),
   );
 
   noteElement.appendChild(noteHeader);
@@ -81,7 +81,8 @@ const bringToFront = (id) => {
   let maxZ = 0;
   noteElements.forEach((el) => {
     // zIndex can be 'auto', so we parse it and default to 0 if it's not a number.
-    const z = parseInt(el.style.zIndex, 10) || 0;
+    const z =
+      parseInt(/** @type {HTMLDivElement} */ (el).style.zIndex, 10) || 0;
     if (z > maxZ) {
       maxZ = z;
     }
@@ -91,9 +92,11 @@ const bringToFront = (id) => {
 
   if (notes[id] && notes[id].zIndex < newZIndex) {
     notes[id].zIndex = newZIndex;
-    const noteElement = document.querySelector(`.sticky-note[data-id='${id}']`);
+    const noteElement = /** @type {HTMLDivElement} */ (
+      document.querySelector(`.sticky-note[data-id='${id}']`)
+    );
     if (noteElement) {
-      noteElement.style.zIndex = newZIndex;
+      noteElement.style.zIndex = newZIndex.toString();
     }
     debouncedSaveNotes();
   }
@@ -164,7 +167,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       `.sticky-note[data-id='${message.id}']`,
     );
     if (noteElement) {
-      noteElement.querySelector('.sticky-note-content').focus();
+      /** @type {HTMLDivElement} */ (
+        noteElement.querySelector('.sticky-note-content')
+      ).focus();
     }
   }
 });
@@ -190,7 +195,9 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
     // Handle added or updated notes
     for (const id in newNotes) {
       const noteData = newNotes[id];
-      let noteElement = document.querySelector(`.sticky-note[data-id='${id}']`);
+      let noteElement = /** @type {HTMLDivElement} */ (
+        document.querySelector(`.sticky-note[data-id='${id}']`)
+      );
 
       if (!noteElement) {
         // Note was added
@@ -203,8 +210,8 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
         noteElement.style.zIndex = noteData.zIndex || 1;
 
         // Update content only if the element is not focused
-        const contentElement = noteElement.querySelector(
-          '.sticky-note-content',
+        const contentElement = /** @type {HTMLDivElement} */ (
+          noteElement.querySelector('.sticky-note-content')
         );
         if (document.activeElement !== contentElement) {
           if (contentElement.innerText !== noteData.content) {
