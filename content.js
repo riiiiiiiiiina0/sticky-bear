@@ -9,6 +9,7 @@ const debounce = (func, delay) => {
 let notes = {};
 const debouncedSaveNotes = debounce(() => saveNotes(), 300);
 let stickyNotesContainer = null;
+let isDragging = false;
 
 const initializeStickyNotesContainer = () => {
   if (!stickyNotesContainer) {
@@ -113,6 +114,7 @@ const makeDraggable = (element) => {
 
   function dragMouseDown(e) {
     e.preventDefault();
+    isDragging = true;
     pos3 = e.clientX;
     pos4 = e.clientY;
     document.onmouseup = closeDragElement;
@@ -132,6 +134,7 @@ const makeDraggable = (element) => {
   function closeDragElement() {
     document.onmouseup = null;
     document.onmousemove = null;
+    isDragging = false;
     const id = element.getAttribute('data-id');
     if (notes[id]) {
       notes[id].left = element.style.left;
@@ -204,9 +207,11 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
         initializeStickyNotesContainer();
         createNoteElement(id, noteData);
       } else {
-        // Note was updated, update position and z-index
-        noteElement.style.left = noteData.left;
-        noteElement.style.top = noteData.top;
+        // Note was updated, update position and z-index only if not currently dragging
+        if (!isDragging) {
+          noteElement.style.left = noteData.left;
+          noteElement.style.top = noteData.top;
+        }
         noteElement.style.zIndex = noteData.zIndex || 1;
 
         // Update content only if the element is not focused
