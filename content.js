@@ -90,7 +90,7 @@ const bringToFront = (id) => {
 
   const newZIndex = maxZ + 1;
 
-  if (notes[id] && notes[id].zIndex < newZIndex) {
+  if (notes[id]) {
     notes[id].zIndex = newZIndex;
     const noteElement = /** @type {HTMLDivElement} */ (
       document.querySelector(`.sticky-note[data-id='${id}']`)
