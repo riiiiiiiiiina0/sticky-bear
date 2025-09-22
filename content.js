@@ -1,4 +1,13 @@
+const debounce = (func, delay) => {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), delay);
+  };
+};
+
 let notes = {};
+const debouncedSaveNotes = debounce(() => saveNotes(), 300);
 
 const loadNotes = () => {
   chrome.storage.local.get("notes", (data) => {
@@ -76,15 +85,19 @@ const makeDraggable = (element) => {
     document.onmouseup = null;
     document.onmousemove = null;
     const id = element.getAttribute("data-id");
-    notes[id].left = element.style.left;
-    notes[id].top = element.style.top;
-    saveNotes();
+    if (notes[id]) {
+      notes[id].left = element.style.left;
+      notes[id].top = element.style.top;
+      debouncedSaveNotes();
+    }
   }
 };
 
 const updateNoteContent = (id, content) => {
-  notes[id].content = content;
-  saveNotes();
+  if (notes[id]) {
+    notes[id].content = content;
+    debouncedSaveNotes();
+  }
 };
 
 const deleteNote = (id) => {
@@ -115,8 +128,42 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 chrome.storage.onChanged.addListener((changes, namespace) => {
   if (changes.notes) {
-    notes = changes.notes.newValue;
-    renderNotes();
+    const oldNotes = changes.notes.oldValue || {};
+    const newNotes = changes.notes.newValue || {};
+    notes = newNotes; // Keep local notes object in sync
+
+    // Handle deleted notes
+    for (const id in oldNotes) {
+      if (!newNotes[id]) {
+        const noteElement = document.querySelector(`.sticky-note[data-id='${id}']`);
+        if (noteElement) {
+          noteElement.remove();
+        }
+      }
+    }
+
+    // Handle added or updated notes
+    for (const id in newNotes) {
+      const noteData = newNotes[id];
+      let noteElement = document.querySelector(`.sticky-note[data-id='${id}']`);
+
+      if (!noteElement) {
+        // Note was added
+        createNoteElement(id, noteData);
+      } else {
+        // Note was updated, update position
+        noteElement.style.left = noteData.left;
+        noteElement.style.top = noteData.top;
+
+        // Update content only if the element is not focused
+        const contentElement = noteElement.querySelector('.sticky-note-content');
+        if (document.activeElement !== contentElement) {
+          if (contentElement.innerText !== noteData.content) {
+            contentElement.innerText = noteData.content;
+          }
+        }
+      }
+    }
   }
 });
 
