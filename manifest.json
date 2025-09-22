@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Sticky Notes",
+  "version": "1.0",
+  "description": "A simple sticky note extension.",
+  "permissions": [
+    "storage"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Create a new note"
+  }
+}
