@@ -18,6 +18,8 @@
   display: flex;
   flex-direction: column;
   pointer-events: auto;
+  min-width: 150px;
+  min-height: 100px;
 }
 
 .sticky-note-header {
@@ -49,6 +51,27 @@
   line-height: 1.4;
 }
 
+.resize-handle {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 15px;
+  height: 15px;
+  cursor: nw-resize;
+  background: transparent;
+}
+
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-bottom: 8px solid #999;
+}
+
 /* Dark Mode Styles */
 @media (prefers-color-scheme: dark) {
   .sticky-note {
@@ -63,5 +86,9 @@
 
   .delete-note {
     color: #eee;
+  }
+
+  .resize-handle::after {
+    border-bottom-color: #666;
   }
 }

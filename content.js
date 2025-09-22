@@ -45,6 +45,8 @@ const createNoteElement = (id, note) => {
   noteElement.setAttribute('data-id', id);
   noteElement.style.left = note.left;
   noteElement.style.top = note.top;
+  noteElement.style.width = note.width || '200px';
+  noteElement.style.height = note.height || '200px';
   noteElement.style.zIndex = note.zIndex || 1; // Default z-index
 
   noteElement.addEventListener('mousedown', () => {
@@ -69,12 +71,17 @@ const createNoteElement = (id, note) => {
     updateNoteContent(id, /** @type {HTMLDivElement} */ (e.target).innerText),
   );
 
+  const resizeHandle = document.createElement('div');
+  resizeHandle.classList.add('resize-handle');
+
   noteElement.appendChild(noteHeader);
   noteElement.appendChild(noteContent);
+  noteElement.appendChild(resizeHandle);
   initializeStickyNotesContainer();
   stickyNotesContainer.appendChild(noteElement);
 
   makeDraggable(noteElement);
+  makeResizable(noteElement, resizeHandle);
 };
 
 const bringToFront = (id) => {
@@ -139,6 +146,60 @@ const makeDraggable = (element) => {
     if (notes[id]) {
       notes[id].left = element.style.left;
       notes[id].top = element.style.top;
+      debouncedSaveNotes();
+    }
+  }
+};
+
+const makeResizable = (element, resizeHandle) => {
+  let isResizing = false;
+  let startX, startY, startWidth, startHeight;
+
+  resizeHandle.onmousedown = (e) => {
+    e.preventDefault();
+    e.stopPropagation(); // Prevent triggering the note's mousedown event
+    isResizing = true;
+    isDragging = true; // Prevent storage updates during resize
+    startX = e.clientX;
+    startY = e.clientY;
+    startWidth = parseInt(window.getComputedStyle(element).width, 10);
+    startHeight = parseInt(window.getComputedStyle(element).height, 10);
+
+    document.onmousemove = doResize;
+    document.onmouseup = stopResize;
+  };
+
+  function doResize(e) {
+    if (!isResizing) return;
+
+    const newWidth = startWidth + e.clientX - startX;
+    const newHeight = startHeight + e.clientY - startY;
+
+    // Set minimum dimensions
+    const minWidth = 150;
+    const minHeight = 100;
+
+    if (newWidth >= minWidth) {
+      element.style.width = newWidth + 'px';
+    }
+    if (newHeight >= minHeight) {
+      element.style.height = newHeight + 'px';
+    }
+  }
+
+  function stopResize() {
+    if (!isResizing) return;
+
+    isResizing = false;
+    isDragging = false;
+    document.onmousemove = null;
+    document.onmouseup = null;
+
+    // Save the new dimensions
+    const id = element.getAttribute('data-id');
+    if (notes[id]) {
+      notes[id].width = element.style.width;
+      notes[id].height = element.style.height;
       debouncedSaveNotes();
     }
   }
@@ -211,6 +272,8 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
         if (!isDragging) {
           noteElement.style.left = noteData.left;
           noteElement.style.top = noteData.top;
+          noteElement.style.width = noteData.width || '200px';
+          noteElement.style.height = noteData.height || '200px';
         }
         noteElement.style.zIndex = noteData.zIndex || 1;
 
