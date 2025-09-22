@@ -26,3 +26,15 @@ chrome.action.onClicked.addListener((activeTab) => {
     });
   });
 });
+
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason === 'install' || details.reason === 'update') {
+    chrome.tabs.query({}, (tabs) => {
+      tabs.forEach((tab) => {
+        if (tab.id && tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('edge://')) {
+          chrome.tabs.reload(tab.id);
+        }
+      });
+    });
+  }
+});

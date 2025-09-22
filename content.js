@@ -33,6 +33,11 @@ const createNoteElement = (id, note) => {
   noteElement.setAttribute("data-id", id);
   noteElement.style.left = note.left;
   noteElement.style.top = note.top;
+  noteElement.style.zIndex = note.zIndex || 1; // Default z-index
+
+  noteElement.addEventListener('mousedown', () => {
+    bringToFront(id);
+  });
 
   const noteHeader = document.createElement("div");
   noteHeader.classList.add("sticky-note-header");
@@ -55,6 +60,29 @@ const createNoteElement = (id, note) => {
   document.body.appendChild(noteElement);
 
   makeDraggable(noteElement);
+};
+
+const bringToFront = (id) => {
+  const noteElements = document.querySelectorAll('.sticky-note');
+  let maxZ = 0;
+  noteElements.forEach(el => {
+    // zIndex can be 'auto', so we parse it and default to 0 if it's not a number.
+    const z = parseInt(el.style.zIndex, 10) || 0;
+    if (z > maxZ) {
+      maxZ = z;
+    }
+  });
+
+  const newZIndex = maxZ + 1;
+
+  if (notes[id] && notes[id].zIndex < newZIndex) {
+    notes[id].zIndex = newZIndex;
+    const noteElement = document.querySelector(`.sticky-note[data-id='${id}']`);
+    if (noteElement) {
+      noteElement.style.zIndex = newZIndex;
+    }
+    debouncedSaveNotes();
+  }
 };
 
 const makeDraggable = (element) => {
@@ -147,9 +175,10 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
         // Note was added
         createNoteElement(id, noteData);
       } else {
-        // Note was updated, update position
+        // Note was updated, update position and z-index
         noteElement.style.left = noteData.left;
         noteElement.style.top = noteData.top;
+        noteElement.style.zIndex = noteData.zIndex || 1;
 
         // Update content only if the element is not focused
         const contentElement = noteElement.querySelector('.sticky-note-content');
