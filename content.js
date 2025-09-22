@@ -1,0 +1,370 @@
+const debounce = (func, delay) => {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), delay);
+  };
+};
+
+let notes = {};
+const debouncedSaveNotes = debounce(() => saveNotes(), 300);
+let stickyNotesContainer = null;
+let isDragging = false;
+
+const initializeStickyNotesContainer = () => {
+  if (!stickyNotesContainer) {
+    stickyNotesContainer = document.createElement('div');
+    stickyNotesContainer.classList.add('sticky-notes-container');
+    document.body.appendChild(stickyNotesContainer);
+  }
+};
+
+const loadNotes = () => {
+  initializeStickyNotesContainer();
+  chrome.storage.local.get('notes', (data) => {
+    if (data.notes) {
+      notes = data.notes;
+      renderNotes();
+    }
+  });
+};
+
+const renderNotes = () => {
+  initializeStickyNotesContainer();
+  const existingNotes = document.querySelectorAll('.sticky-note');
+  existingNotes.forEach((note) => note.remove());
+
+  for (const id in notes) {
+    createNoteElement(id, notes[id]);
+  }
+};
+
+const createNoteElement = (id, note) => {
+  const noteElement = document.createElement('div');
+  noteElement.classList.add('sticky-note');
+  noteElement.setAttribute('data-id', id);
+  noteElement.style.left = note.left;
+  noteElement.style.top = note.top;
+  noteElement.style.width = note.width || '200px';
+  noteElement.style.height = note.height || '200px';
+  noteElement.style.zIndex = note.zIndex || 1; // Default z-index
+
+  // Set minimized state
+  if (note.minimized) {
+    noteElement.classList.add('minimized');
+  }
+
+  noteElement.addEventListener('mousedown', () => {
+    bringToFront(id);
+  });
+
+  const noteHeader = document.createElement('div');
+  noteHeader.classList.add('sticky-note-header');
+
+  // Add double-click handler for minimize/maximize
+  noteHeader.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleMinimize(id);
+  });
+
+  const headerText = document.createElement('span');
+  headerText.classList.add('header-text');
+  headerText.innerText =
+    note.content.substring(0, 30) + (note.content.length > 30 ? '...' : '');
+
+  const deleteButton = document.createElement('button');
+  deleteButton.classList.add('delete-note');
+  deleteButton.innerHTML = '&times;';
+  deleteButton.addEventListener('click', () => deleteNote(id));
+
+  noteHeader.appendChild(headerText);
+  noteHeader.appendChild(deleteButton);
+
+  const noteContent = document.createElement('div');
+  noteContent.classList.add('sticky-note-content');
+  noteContent.setAttribute('contenteditable', 'true');
+  noteContent.innerText = note.content;
+  noteContent.addEventListener('input', (e) =>
+    updateNoteContent(id, /** @type {HTMLDivElement} */ (e.target).innerText),
+  );
+
+  const resizeHandle = document.createElement('div');
+  resizeHandle.classList.add('resize-handle');
+
+  noteElement.appendChild(noteHeader);
+  noteElement.appendChild(noteContent);
+  noteElement.appendChild(resizeHandle);
+  initializeStickyNotesContainer();
+  stickyNotesContainer.appendChild(noteElement);
+
+  makeDraggable(noteElement);
+  makeResizable(noteElement, resizeHandle);
+};
+
+const bringToFront = (id) => {
+  const noteElements = document.querySelectorAll('.sticky-note');
+  let maxZ = 0;
+  noteElements.forEach((el) => {
+    // zIndex can be 'auto', so we parse it and default to 0 if it's not a number.
+    const z =
+      parseInt(/** @type {HTMLDivElement} */ (el).style.zIndex, 10) || 0;
+    if (z > maxZ) {
+      maxZ = z;
+    }
+  });
+
+  const newZIndex = maxZ + 1;
+
+  if (notes[id]) {
+    notes[id].zIndex = newZIndex;
+    const noteElement = /** @type {HTMLDivElement} */ (
+      document.querySelector(`.sticky-note[data-id='${id}']`)
+    );
+    if (noteElement) {
+      noteElement.style.zIndex = newZIndex.toString();
+    }
+    debouncedSaveNotes();
+  }
+};
+
+const makeDraggable = (element) => {
+  let pos1 = 0,
+    pos2 = 0,
+    pos3 = 0,
+    pos4 = 0;
+  const header = element.querySelector('.sticky-note-header');
+
+  header.onmousedown = dragMouseDown;
+
+  function dragMouseDown(e) {
+    e.preventDefault();
+    isDragging = true;
+    pos3 = e.clientX;
+    pos4 = e.clientY;
+    document.onmouseup = closeDragElement;
+    document.onmousemove = elementDrag;
+  }
+
+  function elementDrag(e) {
+    e.preventDefault();
+    pos1 = pos3 - e.clientX;
+    pos2 = pos4 - e.clientY;
+    pos3 = e.clientX;
+    pos4 = e.clientY;
+    element.style.top = element.offsetTop - pos2 + 'px';
+    element.style.left = element.offsetLeft - pos1 + 'px';
+  }
+
+  function closeDragElement() {
+    document.onmouseup = null;
+    document.onmousemove = null;
+    isDragging = false;
+    const id = element.getAttribute('data-id');
+    if (notes[id]) {
+      notes[id].left = element.style.left;
+      notes[id].top = element.style.top;
+      debouncedSaveNotes();
+    }
+  }
+};
+
+const makeResizable = (element, resizeHandle) => {
+  let isResizing = false;
+  let startX, startY, startWidth, startHeight;
+
+  resizeHandle.onmousedown = (e) => {
+    e.preventDefault();
+    e.stopPropagation(); // Prevent triggering the note's mousedown event
+    isResizing = true;
+    isDragging = true; // Prevent storage updates during resize
+    startX = e.clientX;
+    startY = e.clientY;
+    startWidth = parseInt(window.getComputedStyle(element).width, 10);
+    startHeight = parseInt(window.getComputedStyle(element).height, 10);
+
+    document.onmousemove = doResize;
+    document.onmouseup = stopResize;
+  };
+
+  function doResize(e) {
+    if (!isResizing) return;
+
+    const newWidth = startWidth + e.clientX - startX;
+    const newHeight = startHeight + e.clientY - startY;
+
+    // Set minimum dimensions
+    const minWidth = 150;
+    const minHeight = 100;
+
+    if (newWidth >= minWidth) {
+      element.style.width = newWidth + 'px';
+    }
+    if (newHeight >= minHeight) {
+      element.style.height = newHeight + 'px';
+    }
+  }
+
+  function stopResize() {
+    if (!isResizing) return;
+
+    isResizing = false;
+    isDragging = false;
+    document.onmousemove = null;
+    document.onmouseup = null;
+
+    // Save the new dimensions
+    const id = element.getAttribute('data-id');
+    if (notes[id]) {
+      notes[id].width = element.style.width;
+      notes[id].height = element.style.height;
+      debouncedSaveNotes();
+    }
+  }
+};
+
+const toggleMinimize = (id) => {
+  const noteElement = document.querySelector(`.sticky-note[data-id='${id}']`);
+  if (!noteElement || !notes[id]) return;
+
+  const isMinimized = noteElement.classList.contains('minimized');
+
+  if (isMinimized) {
+    // Expand the note
+    noteElement.classList.remove('minimized');
+    notes[id].minimized = false;
+  } else {
+    // Minimize the note
+    noteElement.classList.add('minimized');
+    notes[id].minimized = true;
+
+    // Update header text with current content
+    const headerText = /** @type {HTMLSpanElement} */ (
+      noteElement.querySelector('.header-text')
+    );
+    const content = notes[id].content || '';
+    headerText.innerText =
+      content.substring(0, 30) + (content.length > 30 ? '...' : '');
+  }
+
+  debouncedSaveNotes();
+};
+
+const updateNoteContent = (id, content) => {
+  if (notes[id]) {
+    notes[id].content = content;
+
+    // Update header text if note is minimized
+    const noteElement = document.querySelector(`.sticky-note[data-id='${id}']`);
+    if (noteElement && noteElement.classList.contains('minimized')) {
+      const headerText = /** @type {HTMLSpanElement} */ (
+        noteElement.querySelector('.header-text')
+      );
+      if (headerText) {
+        headerText.innerText =
+          content.substring(0, 30) + (content.length > 30 ? '...' : '');
+      }
+    }
+
+    debouncedSaveNotes();
+  }
+};
+
+const deleteNote = (id) => {
+  delete notes[id];
+  saveNotes();
+  const noteElement = document.querySelector(`.sticky-note[data-id='${id}']`);
+  if (noteElement) {
+    noteElement.remove();
+  }
+};
+
+const saveNotes = () => {
+  chrome.storage.local.set({ notes });
+};
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === 'focus_note') {
+    const noteElement = document.querySelector(
+      `.sticky-note[data-id='${message.id}']`,
+    );
+    if (noteElement) {
+      /** @type {HTMLDivElement} */ (
+        noteElement.querySelector('.sticky-note-content')
+      ).focus();
+    }
+  }
+});
+
+chrome.storage.onChanged.addListener((changes, namespace) => {
+  if (changes.notes) {
+    const oldNotes = changes.notes.oldValue || {};
+    const newNotes = changes.notes.newValue || {};
+    notes = newNotes; // Keep local notes object in sync
+
+    // Handle deleted notes
+    for (const id in oldNotes) {
+      if (!newNotes[id]) {
+        const noteElement = document.querySelector(
+          `.sticky-note[data-id='${id}']`,
+        );
+        if (noteElement) {
+          noteElement.remove();
+        }
+      }
+    }
+
+    // Handle added or updated notes
+    for (const id in newNotes) {
+      const noteData = newNotes[id];
+      let noteElement = /** @type {HTMLDivElement} */ (
+        document.querySelector(`.sticky-note[data-id='${id}']`)
+      );
+
+      if (!noteElement) {
+        // Note was added
+        initializeStickyNotesContainer();
+        createNoteElement(id, noteData);
+      } else {
+        // Note was updated, update position and z-index only if not currently dragging
+        if (!isDragging) {
+          noteElement.style.left = noteData.left;
+          noteElement.style.top = noteData.top;
+          noteElement.style.width = noteData.width || '200px';
+          noteElement.style.height = noteData.height || '200px';
+        }
+        noteElement.style.zIndex = noteData.zIndex || 1;
+
+        // Update minimized state
+        if (noteData.minimized) {
+          if (!noteElement.classList.contains('minimized')) {
+            noteElement.classList.add('minimized');
+            // Update header text
+            const headerText = /** @type {HTMLSpanElement} */ (
+              noteElement.querySelector('.header-text')
+            );
+            if (headerText) {
+              const content = noteData.content || '';
+              headerText.innerText =
+                content.substring(0, 30) + (content.length > 30 ? '...' : '');
+            }
+          }
+        } else {
+          noteElement.classList.remove('minimized');
+        }
+
+        // Update content only if the element is not focused
+        const contentElement = /** @type {HTMLDivElement} */ (
+          noteElement.querySelector('.sticky-note-content')
+        );
+        if (document.activeElement !== contentElement) {
+          if (contentElement.innerText !== noteData.content) {
+            contentElement.innerText = noteData.content;
+          }
+        }
+      }
+    }
+  }
+});
+
+loadNotes();

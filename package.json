@@ -1,0 +1,23 @@
+{
+  "name": "sticky-bear",
+  "version": "1.0.0",
+  "description": "A chrome extension that let user to add always-on-top globally-available sticky notes on browser, and sticky notes that can be pinned to specific location inside any page.",
+  "main": "background.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/riiiiiiiiiina0/sticky-bear.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/riiiiiiiiiina0/sticky-bear/issues"
+  },
+  "homepage": "https://github.com/riiiiiiiiiina0/sticky-bear#readme",
+  "devDependencies": {
+    "@types/chrome": "^0.1.12"
+  }
+}
