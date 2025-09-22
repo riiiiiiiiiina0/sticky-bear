@@ -114,14 +114,10 @@ const saveNotes = () => {
 };
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === "create_note") {
-    const { id, note } = message;
-    notes[id] = note;
-    createNoteElement(id, note);
-    saveNotes();
-    const newNoteElement = document.querySelector(`.sticky-note[data-id='${id}']`);
-    if (newNoteElement) {
-      newNoteElement.querySelector('.sticky-note-content').focus();
+  if (message.action === "focus_note") {
+    const noteElement = document.querySelector(`.sticky-note[data-id='${message.id}']`);
+    if (noteElement) {
+      noteElement.querySelector('.sticky-note-content').focus();
     }
   }
 });

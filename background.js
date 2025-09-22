@@ -1,4 +1,4 @@
-chrome.action.onClicked.addListener(() => {
+chrome.action.onClicked.addListener((activeTab) => {
   const newNoteId = Date.now().toString();
   const newNote = {
     content: "New note",
@@ -6,20 +6,20 @@ chrome.action.onClicked.addListener(() => {
     top: "100px",
   };
 
-  // Get all tabs and send the message to each of them
-  chrome.tabs.query({}, (tabs) => {
-    tabs.forEach(tab => {
-      // We can't send messages to chrome:// URLs, so we need to check
-      if (tab.url && !tab.url.startsWith("chrome://")) {
-        chrome.tabs.sendMessage(tab.id, {
-          action: "create_note",
+  // First, save the new note to storage. This is the source of truth.
+  chrome.storage.local.get({ notes: {} }, (data) => {
+    const notes = data.notes;
+    notes[newNoteId] = newNote;
+    chrome.storage.local.set({ notes }, () => {
+      // After saving, send a message to the active tab to focus the new note.
+      // The note element will be created by the onChanged listener in all tabs.
+      if (activeTab.id) {
+         chrome.tabs.sendMessage(activeTab.id, {
+          action: "focus_note",
           id: newNoteId,
-          note: newNote,
         }, (response) => {
-          // This callback is used to avoid an error message in the console
-          // about an unhandled response.
           if (chrome.runtime.lastError) {
-            // Ignore errors, which can happen if the content script isn't injected yet
+            // Ignore errors, e.g., if the content script isn't ready.
           }
         });
       }
