@@ -8,9 +8,19 @@ const debounce = (func, delay) => {
 
 let notes = {};
 const debouncedSaveNotes = debounce(() => saveNotes(), 300);
+let stickyNotesContainer = null;
+
+const initializeStickyNotesContainer = () => {
+  if (!stickyNotesContainer) {
+    stickyNotesContainer = document.createElement('div');
+    stickyNotesContainer.classList.add('sticky-notes-container');
+    document.body.appendChild(stickyNotesContainer);
+  }
+};
 
 const loadNotes = () => {
-  chrome.storage.local.get("notes", (data) => {
+  initializeStickyNotesContainer();
+  chrome.storage.local.get('notes', (data) => {
     if (data.notes) {
       notes = data.notes;
       renderNotes();
@@ -19,8 +29,9 @@ const loadNotes = () => {
 };
 
 const renderNotes = () => {
-  const existingNotes = document.querySelectorAll(".sticky-note");
-  existingNotes.forEach(note => note.remove());
+  initializeStickyNotesContainer();
+  const existingNotes = document.querySelectorAll('.sticky-note');
+  existingNotes.forEach((note) => note.remove());
 
   for (const id in notes) {
     createNoteElement(id, notes[id]);
@@ -28,9 +39,9 @@ const renderNotes = () => {
 };
 
 const createNoteElement = (id, note) => {
-  const noteElement = document.createElement("div");
-  noteElement.classList.add("sticky-note");
-  noteElement.setAttribute("data-id", id);
+  const noteElement = document.createElement('div');
+  noteElement.classList.add('sticky-note');
+  noteElement.setAttribute('data-id', id);
   noteElement.style.left = note.left;
   noteElement.style.top = note.top;
   noteElement.style.zIndex = note.zIndex || 1; // Default z-index
@@ -39,25 +50,28 @@ const createNoteElement = (id, note) => {
     bringToFront(id);
   });
 
-  const noteHeader = document.createElement("div");
-  noteHeader.classList.add("sticky-note-header");
+  const noteHeader = document.createElement('div');
+  noteHeader.classList.add('sticky-note-header');
 
-  const deleteButton = document.createElement("button");
-  deleteButton.classList.add("delete-note");
-  deleteButton.innerHTML = "&times;";
-  deleteButton.addEventListener("click", () => deleteNote(id));
+  const deleteButton = document.createElement('button');
+  deleteButton.classList.add('delete-note');
+  deleteButton.innerHTML = '&times;';
+  deleteButton.addEventListener('click', () => deleteNote(id));
 
   noteHeader.appendChild(deleteButton);
 
-  const noteContent = document.createElement("div");
-  noteContent.classList.add("sticky-note-content");
-  noteContent.setAttribute("contenteditable", "true");
+  const noteContent = document.createElement('div');
+  noteContent.classList.add('sticky-note-content');
+  noteContent.setAttribute('contenteditable', 'true');
   noteContent.innerText = note.content;
-  noteContent.addEventListener("input", (e) => updateNoteContent(id, e.target.innerText));
+  noteContent.addEventListener('input', (e) =>
+    updateNoteContent(id, e.target.innerText),
+  );
 
   noteElement.appendChild(noteHeader);
   noteElement.appendChild(noteContent);
-  document.body.appendChild(noteElement);
+  initializeStickyNotesContainer();
+  stickyNotesContainer.appendChild(noteElement);
 
   makeDraggable(noteElement);
 };
@@ -65,7 +79,7 @@ const createNoteElement = (id, note) => {
 const bringToFront = (id) => {
   const noteElements = document.querySelectorAll('.sticky-note');
   let maxZ = 0;
-  noteElements.forEach(el => {
+  noteElements.forEach((el) => {
     // zIndex can be 'auto', so we parse it and default to 0 if it's not a number.
     const z = parseInt(el.style.zIndex, 10) || 0;
     if (z > maxZ) {
@@ -86,8 +100,11 @@ const bringToFront = (id) => {
 };
 
 const makeDraggable = (element) => {
-  let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-  const header = element.querySelector(".sticky-note-header");
+  let pos1 = 0,
+    pos2 = 0,
+    pos3 = 0,
+    pos4 = 0;
+  const header = element.querySelector('.sticky-note-header');
 
   header.onmousedown = dragMouseDown;
 
@@ -105,14 +122,14 @@ const makeDraggable = (element) => {
     pos2 = pos4 - e.clientY;
     pos3 = e.clientX;
     pos4 = e.clientY;
-    element.style.top = (element.offsetTop - pos2) + "px";
-    element.style.left = (element.offsetLeft - pos1) + "px";
+    element.style.top = element.offsetTop - pos2 + 'px';
+    element.style.left = element.offsetLeft - pos1 + 'px';
   }
 
   function closeDragElement() {
     document.onmouseup = null;
     document.onmousemove = null;
-    const id = element.getAttribute("data-id");
+    const id = element.getAttribute('data-id');
     if (notes[id]) {
       notes[id].left = element.style.left;
       notes[id].top = element.style.top;
@@ -142,8 +159,10 @@ const saveNotes = () => {
 };
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === "focus_note") {
-    const noteElement = document.querySelector(`.sticky-note[data-id='${message.id}']`);
+  if (message.action === 'focus_note') {
+    const noteElement = document.querySelector(
+      `.sticky-note[data-id='${message.id}']`,
+    );
     if (noteElement) {
       noteElement.querySelector('.sticky-note-content').focus();
     }
@@ -159,7 +178,9 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
     // Handle deleted notes
     for (const id in oldNotes) {
       if (!newNotes[id]) {
-        const noteElement = document.querySelector(`.sticky-note[data-id='${id}']`);
+        const noteElement = document.querySelector(
+          `.sticky-note[data-id='${id}']`,
+        );
         if (noteElement) {
           noteElement.remove();
         }
@@ -173,6 +194,7 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 
       if (!noteElement) {
         // Note was added
+        initializeStickyNotesContainer();
         createNoteElement(id, noteData);
       } else {
         // Note was updated, update position and z-index
@@ -181,7 +203,9 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
         noteElement.style.zIndex = noteData.zIndex || 1;
 
         // Update content only if the element is not focused
-        const contentElement = noteElement.querySelector('.sticky-note-content');
+        const contentElement = noteElement.querySelector(
+          '.sticky-note-content',
+        );
         if (document.activeElement !== contentElement) {
           if (contentElement.innerText !== noteData.content) {
             contentElement.innerText = noteData.content;
