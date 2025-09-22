@@ -49,6 +49,11 @@ const createNoteElement = (id, note) => {
   noteElement.style.height = note.height || '200px';
   noteElement.style.zIndex = note.zIndex || 1; // Default z-index
 
+  // Set minimized state
+  if (note.minimized) {
+    noteElement.classList.add('minimized');
+  }
+
   noteElement.addEventListener('mousedown', () => {
     bringToFront(id);
   });
@@ -56,11 +61,24 @@ const createNoteElement = (id, note) => {
   const noteHeader = document.createElement('div');
   noteHeader.classList.add('sticky-note-header');
 
+  // Add double-click handler for minimize/maximize
+  noteHeader.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleMinimize(id);
+  });
+
+  const headerText = document.createElement('span');
+  headerText.classList.add('header-text');
+  headerText.innerText =
+    note.content.substring(0, 30) + (note.content.length > 30 ? '...' : '');
+
   const deleteButton = document.createElement('button');
   deleteButton.classList.add('delete-note');
   deleteButton.innerHTML = '&times;';
   deleteButton.addEventListener('click', () => deleteNote(id));
 
+  noteHeader.appendChild(headerText);
   noteHeader.appendChild(deleteButton);
 
   const noteContent = document.createElement('div');
@@ -205,9 +223,49 @@ const makeResizable = (element, resizeHandle) => {
   }
 };
 
+const toggleMinimize = (id) => {
+  const noteElement = document.querySelector(`.sticky-note[data-id='${id}']`);
+  if (!noteElement || !notes[id]) return;
+
+  const isMinimized = noteElement.classList.contains('minimized');
+
+  if (isMinimized) {
+    // Expand the note
+    noteElement.classList.remove('minimized');
+    notes[id].minimized = false;
+  } else {
+    // Minimize the note
+    noteElement.classList.add('minimized');
+    notes[id].minimized = true;
+
+    // Update header text with current content
+    const headerText = /** @type {HTMLSpanElement} */ (
+      noteElement.querySelector('.header-text')
+    );
+    const content = notes[id].content || '';
+    headerText.innerText =
+      content.substring(0, 30) + (content.length > 30 ? '...' : '');
+  }
+
+  debouncedSaveNotes();
+};
+
 const updateNoteContent = (id, content) => {
   if (notes[id]) {
     notes[id].content = content;
+
+    // Update header text if note is minimized
+    const noteElement = document.querySelector(`.sticky-note[data-id='${id}']`);
+    if (noteElement && noteElement.classList.contains('minimized')) {
+      const headerText = /** @type {HTMLSpanElement} */ (
+        noteElement.querySelector('.header-text')
+      );
+      if (headerText) {
+        headerText.innerText =
+          content.substring(0, 30) + (content.length > 30 ? '...' : '');
+      }
+    }
+
     debouncedSaveNotes();
   }
 };
@@ -276,6 +334,24 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
           noteElement.style.height = noteData.height || '200px';
         }
         noteElement.style.zIndex = noteData.zIndex || 1;
+
+        // Update minimized state
+        if (noteData.minimized) {
+          if (!noteElement.classList.contains('minimized')) {
+            noteElement.classList.add('minimized');
+            // Update header text
+            const headerText = /** @type {HTMLSpanElement} */ (
+              noteElement.querySelector('.header-text')
+            );
+            if (headerText) {
+              const content = noteData.content || '';
+              headerText.innerText =
+                content.substring(0, 30) + (content.length > 30 ? '...' : '');
+            }
+          }
+        } else {
+          noteElement.classList.remove('minimized');
+        }
 
         // Update content only if the element is not focused
         const contentElement = /** @type {HTMLDivElement} */ (
