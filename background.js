@@ -15,9 +15,11 @@ async function createNoteWindow(noteId) {
     url: url,
     type: 'popup',
     width: 300,
-    height: 300,
-    alwaysOnTop: true
+    height: 300
   });
+  // Set the window to be always on top after creation
+  await chrome.windows.update(win.id, { alwaysOnTop: true });
+
   const map = await getWindowIdMap();
   map[win.id] = noteId;
   await setWindowIdMap(map);
