@@ -120,9 +120,114 @@ const renderNotes = () => {
   }
 };
 
+const createColorDropdown = (noteId, currentColor) => {
+  const colors = [
+    { name: 'yellow', color: '#ffff99' },
+    { name: 'green', color: '#90ee90' },
+    { name: 'blue', color: '#99ccff' },
+    { name: 'red', color: '#ff9999' },
+    { name: 'gray', color: '#cccccc' },
+  ];
+
+  const dropdown = document.createElement('div');
+  dropdown.classList.add('color-dropdown');
+
+  const button = document.createElement('button');
+  button.classList.add('color-dropdown-button');
+  button.style.backgroundColor =
+    colors.find((c) => c.name === currentColor)?.color || '#ffff99';
+  button.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const menu = dropdown.querySelector('.color-dropdown-menu');
+    if (menu) {
+      menu.classList.toggle('show');
+    }
+  });
+
+  const menu = document.createElement('div');
+  menu.classList.add('color-dropdown-menu');
+
+  colors.forEach((colorInfo) => {
+    const option = document.createElement('div');
+    option.classList.add('color-option');
+    option.style.backgroundColor = colorInfo.color;
+    option.title = colorInfo.name;
+
+    if (colorInfo.name === currentColor) {
+      option.classList.add('selected');
+    }
+
+    option.addEventListener('click', (e) => {
+      e.stopPropagation();
+      changeNoteColor(noteId, colorInfo.name);
+      menu.classList.remove('show');
+    });
+
+    menu.appendChild(option);
+  });
+
+  dropdown.appendChild(button);
+  dropdown.appendChild(menu);
+
+  return dropdown;
+};
+
+const changeNoteColor = (noteId, newColor) => {
+  if (!notes[noteId]) return;
+
+  // Update the note data
+  notes[noteId].backgroundColor = newColor;
+
+  // Update the note element classes
+  const noteElement = document.querySelector(
+    `.sticky-note[data-id='${noteId}']`,
+  );
+  if (noteElement) {
+    // Remove all color classes
+    noteElement.classList.remove(
+      'color-yellow',
+      'color-green',
+      'color-blue',
+      'color-red',
+      'color-gray',
+    );
+    // Add the new color class
+    noteElement.classList.add(`color-${newColor}`);
+
+    // Update the dropdown button color
+    const button = /** @type {HTMLButtonElement} */ (
+      noteElement.querySelector('.color-dropdown-button')
+    );
+    if (button) {
+      const colors = {
+        yellow: '#ffff99',
+        green: '#90ee90',
+        blue: '#99ccff',
+        red: '#ff9999',
+        gray: '#cccccc',
+      };
+      button.style.backgroundColor = colors[newColor];
+    }
+
+    // Update selected option in dropdown
+    const options = noteElement.querySelectorAll('.color-option');
+    options.forEach((option) => {
+      const optionElement = /** @type {HTMLDivElement} */ (option);
+      optionElement.classList.remove('selected');
+      if (optionElement.title === newColor) {
+        optionElement.classList.add('selected');
+      }
+    });
+  }
+
+  // Save the changes
+  debouncedSaveNotes();
+};
+
 const createNoteElement = (id, note) => {
   const noteElement = document.createElement('div');
   noteElement.classList.add('sticky-note');
+  noteElement.classList.add(`color-${note.backgroundColor || 'yellow'}`);
   noteElement.setAttribute('data-id', id);
   noteElement.style.left = note.left;
   noteElement.style.top = note.top;
@@ -151,9 +256,14 @@ const createNoteElement = (id, note) => {
 
   const headerText = document.createElement('span');
   headerText.classList.add('header-text');
-  const plainText = stripMarkdown(note.content);
-  headerText.innerText =
-    plainText.substring(0, 30) + (plainText.length > 30 ? '...' : '');
+  // Start with empty content - only show when minimized
+  headerText.innerText = '';
+
+  // Create color dropdown
+  const colorDropdown = createColorDropdown(
+    id,
+    note.backgroundColor || 'yellow',
+  );
 
   const deleteButton = document.createElement('button');
   deleteButton.classList.add('delete-note');
@@ -161,6 +271,7 @@ const createNoteElement = (id, note) => {
   deleteButton.addEventListener('click', () => deleteNote(id));
 
   noteHeader.appendChild(headerText);
+  noteHeader.appendChild(colorDropdown);
   noteHeader.appendChild(deleteButton);
 
   // Create container for TinyMDE editor
@@ -255,6 +366,7 @@ const createNoteElement = (id, note) => {
       // Maintain focus when clicking inside the content area
       editorElement.addEventListener('mousedown', (e) => {
         e.stopPropagation();
+        bringToFront(id);
       });
 
       editorElement.addEventListener('click', (e) => {
@@ -304,6 +416,7 @@ const createNoteElement = (id, note) => {
       // Maintain focus when clicking inside the content area
       textarea.addEventListener('mousedown', (e) => {
         e.stopPropagation();
+        bringToFront(id);
       });
 
       textarea.addEventListener('click', (e) => {
@@ -467,6 +580,14 @@ const toggleMinimize = (id) => {
     // Expand the note
     noteElement.classList.remove('minimized');
     notes[id].minimized = false;
+
+    // Clear header text when expanding
+    const headerText = /** @type {HTMLSpanElement} */ (
+      noteElement.querySelector('.header-text')
+    );
+    if (headerText) {
+      headerText.innerText = '';
+    }
   } else {
     // Minimize the note
     noteElement.classList.add('minimized');
@@ -669,6 +790,61 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
           }
         } else {
           noteElement.classList.remove('minimized');
+          // Clear header text when not minimized
+          const headerText = /** @type {HTMLSpanElement} */ (
+            noteElement.querySelector('.header-text')
+          );
+          if (headerText) {
+            headerText.innerText = '';
+          }
+        }
+
+        // Update background color if changed
+        const currentColorClass = Array.from(noteElement.classList).find(
+          (cls) => cls.startsWith('color-'),
+        );
+        const expectedColorClass = `color-${
+          noteData.backgroundColor || 'yellow'
+        }`;
+        if (currentColorClass !== expectedColorClass) {
+          // Remove all color classes
+          noteElement.classList.remove(
+            'color-yellow',
+            'color-green',
+            'color-blue',
+            'color-red',
+            'color-gray',
+          );
+          // Add the new color class
+          noteElement.classList.add(expectedColorClass);
+
+          // Update the dropdown button color
+          const button = /** @type {HTMLButtonElement} */ (
+            noteElement.querySelector('.color-dropdown-button')
+          );
+          if (button) {
+            const colors = {
+              yellow: '#ffff99',
+              green: '#90ee90',
+              blue: '#99ccff',
+              red: '#ff9999',
+              gray: '#cccccc',
+            };
+            button.style.backgroundColor =
+              colors[noteData.backgroundColor || 'yellow'];
+          }
+
+          // Update selected option in dropdown
+          const options = noteElement.querySelectorAll('.color-option');
+          options.forEach((option) => {
+            const optionElement = /** @type {HTMLDivElement} */ (option);
+            optionElement.classList.remove('selected');
+            if (
+              optionElement.title === (noteData.backgroundColor || 'yellow')
+            ) {
+              optionElement.classList.add('selected');
+            }
+          });
         }
 
         // Update content only if this page is not actively editing the note
@@ -909,6 +1085,28 @@ document.addEventListener('visibilitychange', () => {
 // Additional safeguard for window blur events
 window.addEventListener('blur', () => {
   blurAllStickyNotes();
+});
+
+// Close color dropdowns when clicking outside
+document.addEventListener('click', (e) => {
+  const dropdowns = document.querySelectorAll('.color-dropdown-menu.show');
+  dropdowns.forEach((dropdown) => {
+    const colorDropdown = dropdown.closest('.color-dropdown');
+    const target = /** @type {Node} */ (e.target);
+    if (colorDropdown && target && !colorDropdown.contains(target)) {
+      dropdown.classList.remove('show');
+    }
+  });
+});
+
+// Also close dropdowns on escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const dropdowns = document.querySelectorAll('.color-dropdown-menu.show');
+    dropdowns.forEach((dropdown) => {
+      dropdown.classList.remove('show');
+    });
+  }
 });
 
 loadNotes();

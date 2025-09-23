@@ -19,7 +19,6 @@
   background-color: rgba(255, 255, 204, 0.85);
   backdrop-filter: blur(4px);
   box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
-  border: 1px solid #ccc;
   border-radius: 10px;
   overflow: hidden;
   display: flex;
@@ -34,9 +33,12 @@
   background-color: #f0f0f0;
   cursor: move;
   display: flex;
-  justify-content: flex-end;
+  flex-direction: row;
   align-items: center;
+  gap: 2px;
   padding: 0 4px;
+  position: relative;
+  z-index: 1000;
 }
 
 .header-text {
@@ -48,7 +50,6 @@
   text-overflow: ellipsis;
   margin: 0 4px;
   line-height: 20px;
-  display: none; /* Hidden by default, shown when minimized */
 }
 
 /* In minimized state, change layout to space-between */
@@ -62,6 +63,112 @@
   font-size: 14px;
   cursor: pointer;
   line-height: 1;
+  margin: 0;
+  padding: 0;
+}
+
+.color-dropdown {
+  position: relative;
+  display: inline-block;
+  z-index: 1001;
+}
+
+.color-dropdown-button {
+  background: none;
+  border: 1px solid #999;
+  font-size: 12px;
+  cursor: pointer;
+  line-height: 1;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  margin: 0;
+  padding: 0;
+}
+
+.color-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 2147483647;
+  display: none;
+  padding: 4px;
+}
+
+.color-dropdown-menu::after {
+  content: '';
+  display: table;
+  clear: both;
+}
+
+.color-dropdown-menu.show {
+  display: block;
+}
+
+.color-option {
+  display: block;
+  width: 20px;
+  height: 20px;
+  margin: 2px;
+  border: 1px solid #999;
+  border-radius: 3px;
+  cursor: pointer;
+  float: left;
+}
+
+.color-option:hover {
+  border-color: #333;
+  transform: scale(1.1);
+}
+
+.color-option.selected {
+  border: 2px solid #333;
+  border-width: 2px;
+}
+
+/* Background color variants */
+.sticky-note.color-yellow {
+  background-color: rgba(255, 255, 204, 0.85);
+}
+
+.sticky-note.color-yellow .sticky-note-header {
+  background-color: rgba(240, 240, 180, 0.95);
+}
+
+.sticky-note.color-green {
+  background-color: rgba(144, 238, 144, 0.85);
+}
+
+.sticky-note.color-green .sticky-note-header {
+  background-color: rgba(120, 200, 120, 0.95);
+}
+
+.sticky-note.color-blue {
+  background-color: rgba(204, 229, 255, 0.85);
+}
+
+.sticky-note.color-blue .sticky-note-header {
+  background-color: rgba(180, 210, 240, 0.95);
+}
+
+.sticky-note.color-red {
+  background-color: rgba(255, 204, 204, 0.85);
+}
+
+.sticky-note.color-red .sticky-note-header {
+  background-color: rgba(240, 180, 180, 0.95);
+}
+
+.sticky-note.color-gray {
+  background-color: rgba(230, 230, 230, 0.85);
+}
+
+.sticky-note.color-gray .sticky-note-header {
+  background-color: rgba(200, 200, 200, 0.95);
 }
 
 .sticky-note-content {
@@ -147,7 +254,6 @@
 }
 
 .sticky-note.minimized .header-text {
-  display: block;
   font-weight: bold;
 }
 
@@ -156,7 +262,6 @@
   .sticky-note {
     background-color: rgba(42, 42, 42, 0.85);
     backdrop-filter: blur(4px);
-    border-color: #555;
     color: #eee;
   }
 
@@ -187,5 +292,68 @@
 
   .sticky-note-content textarea {
     color: #eee;
+  }
+
+  /* Dark mode color dropdown styles */
+  .color-dropdown-button {
+    border-color: #666;
+  }
+
+  .color-dropdown-menu {
+    background: #333;
+    border-color: #555;
+  }
+
+  .color-option {
+    border-color: #666;
+  }
+
+  .color-option:hover {
+    border-color: #999;
+  }
+
+  .color-option.selected {
+    border-color: #ccc;
+  }
+
+  /* Dark mode background color variants */
+  .sticky-note.color-yellow {
+    background-color: rgba(80, 80, 40, 0.85);
+  }
+
+  .sticky-note.color-yellow .sticky-note-header {
+    background-color: rgba(100, 100, 50, 0.95);
+  }
+
+  .sticky-note.color-green {
+    background-color: rgba(34, 68, 34, 0.85);
+  }
+
+  .sticky-note.color-green .sticky-note-header {
+    background-color: rgba(44, 88, 44, 0.95);
+  }
+
+  .sticky-note.color-blue {
+    background-color: rgba(40, 60, 80, 0.85);
+  }
+
+  .sticky-note.color-blue .sticky-note-header {
+    background-color: rgba(50, 75, 100, 0.95);
+  }
+
+  .sticky-note.color-red {
+    background-color: rgba(80, 40, 40, 0.85);
+  }
+
+  .sticky-note.color-red .sticky-note-header {
+    background-color: rgba(100, 50, 50, 0.95);
+  }
+
+  .sticky-note.color-gray {
+    background-color: rgba(60, 60, 60, 0.85);
+  }
+
+  .sticky-note.color-gray .sticky-note-header {
+    background-color: rgba(80, 80, 80, 0.95);
   }
 }
