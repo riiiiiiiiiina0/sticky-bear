@@ -207,18 +207,33 @@ chrome.commands.onCommand.addListener((command) => {
 
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install' || details.reason === 'update') {
-    chrome.tabs.query({}, (tabs) => {
-      tabs.forEach((tab) => {
-        if (
-          tab.id &&
-          tab.url &&
-          !tab.url.startsWith('chrome://') &&
-          !tab.url.startsWith('edge://')
-        ) {
+    // Helper that determines whether a tab should be reloaded
+    const shouldReloadTab = async (tab) => {
+      // Skip internal browser pages
+      if (
+        !tab.url ||
+        tab.url.startsWith('chrome://') ||
+        tab.url.startsWith('edge://')
+      ) {
+        return false;
+      }
+
+      // Do not reload if the tab is currently producing audio
+      if (tab.audible) {
+        return false;
+      }
+
+      return true;
+    };
+
+    (async () => {
+      const tabs = await chrome.tabs.query({});
+      for (const tab of tabs) {
+        if (tab.id && (await shouldReloadTab(tab))) {
           chrome.tabs.reload(tab.id);
         }
-      });
-    });
+      }
+    })();
   }
 });
 
