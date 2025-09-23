@@ -8,7 +8,7 @@ A chrome extension that let user to add always-on-top globally-available sticky 
 
 - [x] Always-on-top sticky notes that float above every webpage.
 - [ ] Pin notes to an exact position inside any page – they will re-appear the next time you visit.
-- [x] Rich-text editing powered by TinyMDE (supports **Markdown**, lists, code blocks, etc.).
+- [x] Simple plain-text editing with a lightweight contenteditable.
 - [x] Five colour themes per note (yellow, green, blue, red, gray) for quick visual grouping.
 - [x] Drag to move or use the resize handle to adjust note size; z-index auto-adjusts so the focused note is always on top.
 - [x] Double-click the header to minimise/restore a note, or use the expand button to fit it to its content.

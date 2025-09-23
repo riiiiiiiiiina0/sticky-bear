@@ -65,6 +65,7 @@
 /* In minimized state, change layout to space-between */
 .sticky-note.minimized .sticky-note-header {
   justify-content: space-between;
+  border-radius: 10px;
 }
 
 .sticky-note-header-button {
@@ -203,27 +204,8 @@
   cursor: text;
 }
 
-/* TinyMDE editor styles within sticky notes */
-.sticky-note-content .TinyMDE {
-  width: 100%;
-  height: 100%;
-  background: transparent;
-  border: none;
-  outline: none;
-  font-size: 12px;
-  line-height: 1.4;
-  padding: 0;
-  margin: 0;
-  resize: none;
-}
-
-.sticky-note-content .TinyMDE.focus-visible {
-  box-shadow: none !important;
-  outline: none !important;
-}
-
-/* Fallback textarea styles */
-.sticky-note-content textarea {
+/* Plain text contenteditable editor */
+.sticky-note-content .sticky-note-editor {
   width: 100%;
   height: 100%;
   background: transparent;
@@ -235,6 +217,63 @@
   margin: 0;
   resize: none;
   font-family: inherit;
+  white-space: pre-wrap;
+}
+
+/* Rendered markdown view */
+.sticky-note-content .sticky-note-rendered {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.4;
+  color: inherit;
+}
+.sticky-note-content .sticky-note-rendered h1 {
+  margin: 0.3em 0 0.2em;
+  font-weight: 700;
+  font-size: 1.5em;
+}
+.sticky-note-content .sticky-note-rendered h2 {
+  margin: 0.3em 0 0.2em;
+  font-weight: 600;
+  font-size: 1.3em;
+}
+.sticky-note-content .sticky-note-rendered h3 {
+  margin: 0.3em 0 0.2em;
+  font-weight: 600;
+  font-size: 1.15em;
+}
+.sticky-note-content .sticky-note-rendered h4,
+.sticky-note-content .sticky-note-rendered h5,
+.sticky-note-content .sticky-note-rendered h6 {
+  margin: 0.3em 0 0.2em;
+  font-weight: 600;
+  font-size: 1em;
+}
+.sticky-note-content .sticky-note-rendered p {
+  margin: 0.2em 0;
+}
+.sticky-note-content .sticky-note-rendered img {
+  max-width: 100%;
+  border-radius: 8px;
+}
+.sticky-note-content .sticky-note-rendered ul,
+.sticky-note-content .sticky-note-rendered ol {
+  margin: 0.2em 0 0.2em 1.2em;
+  padding: 0;
+}
+.sticky-note-content .sticky-note-rendered code,
+.sticky-note-content .sticky-note-rendered pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    'Liberation Mono', 'Courier New', monospace;
+  font-size: 11px;
+}
+.sticky-note-content .sticky-note-rendered pre {
+  padding: 6px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+  overflow: auto;
 }
 
 .sticky-note-content:focus {
@@ -308,13 +347,22 @@
     background-color: rgba(0, 0, 0, 0.1);
   }
 
-  /* Dark mode styles for TinyMDE and textarea */
-  .sticky-note-content .TinyMDE {
+  /* Dark mode styles for editor */
+  .sticky-note-content .sticky-note-editor {
     color: #eee;
   }
 
-  .sticky-note-content textarea {
-    color: #eee;
+  /* Improve anchor readability in rendered markdown */
+  .sticky-note-content .sticky-note-rendered a {
+    color: #8ab4f8;
+    text-decoration: underline;
+  }
+  .sticky-note-content .sticky-note-rendered a:visited {
+    color: #c58af9;
+  }
+  .sticky-note-content .sticky-note-rendered a:hover {
+    text-decoration: underline;
+    filter: brightness(1.1);
   }
 
   /* Dark mode color dropdown styles */
