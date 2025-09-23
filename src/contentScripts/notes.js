@@ -1137,8 +1137,16 @@
       isNearLeftEdge = true;
 
       if (stickyNotesContainer) {
-        // Toggle the collapsed class each time mouse enters edge zone
-        stickyNotesContainer.classList.toggle('collapsed');
+        if (stickyNotesContainer.classList.contains('collapsed')) {
+          stickyNotesContainer.classList.remove('collapsed');
+          setTimeout(
+            () => stickyNotesContainer.classList.remove('collapsing'),
+            300,
+          );
+        } else {
+          stickyNotesContainer.classList.add('collapsed');
+          stickyNotesContainer.classList.add('collapsing');
+        }
       }
     } else if (!isCurrentlyNearEdge && isNearLeftEdge) {
       // Update state when mouse leaves edge zone
