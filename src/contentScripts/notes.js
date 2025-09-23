@@ -1007,6 +1007,21 @@
       return false;
     }
 
+    // Ensure the editor view is visible before attempting to focus
+    try {
+      const editorEl = noteElement.querySelector('.sticky-note-editor');
+      const renderedEl = noteElement.querySelector('.sticky-note-rendered');
+      if (editorEl && renderedEl) {
+        const isRenderedVisible =
+          window.getComputedStyle(/** @type {HTMLElement} */ (renderedEl))
+            .display !== 'none';
+        if (isRenderedVisible) {
+          /** @type {HTMLElement} */ (renderedEl).style.display = 'none';
+          /** @type {HTMLElement} */ (editorEl).style.display = 'block';
+        }
+      }
+    } catch {}
+
     // Try multiple focus strategies
     let focused = false;
 
