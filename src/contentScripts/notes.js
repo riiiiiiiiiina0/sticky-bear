@@ -90,12 +90,44 @@
     }
   });
 
+  const getShadowRoot = () => {
+    const host = document.querySelector('#sticky-notes-host');
+    return host ? host.shadowRoot : null;
+  };
+
   // Ensure scale is applied once the container exists
   const initializeStickyNotesContainer = () => {
+    if (document.querySelector('#sticky-notes-host')) {
+      if (!stickyNotesContainer) {
+        const shadowRoot = getShadowRoot();
+        stickyNotesContainer = shadowRoot.querySelector('.sticky-notes-container');
+      }
+      return;
+    }
     if (!stickyNotesContainer) {
+      const host = document.createElement('div');
+      host.id = 'sticky-notes-host';
+      document.body.appendChild(host);
+      const shadowRoot = host.attachShadow({ mode: 'open' });
+
+      const styleElement = document.createElement('style');
+      shadowRoot.appendChild(styleElement);
+
+      // Fetch and apply styles
+      Promise.all([
+        fetch(chrome.runtime.getURL('src/contentScripts/notes.css')).then((res) =>
+          res.text(),
+        ),
+        fetch(chrome.runtime.getURL('libs/tiny-mde.min.css')).then((res) =>
+          res.text(),
+        ),
+      ]).then(([notesCss, tinyMdeCss]) => {
+        styleElement.textContent = notesCss + '\n' + tinyMdeCss;
+      });
+
       stickyNotesContainer = document.createElement('div');
       stickyNotesContainer.classList.add('sticky-notes-container');
-      document.body.appendChild(stickyNotesContainer);
+      shadowRoot.appendChild(stickyNotesContainer);
       // Apply scaling based on unified DPR when container is first created
       applyContainerScale();
     }
@@ -113,7 +145,9 @@
 
   const renderNotes = () => {
     initializeStickyNotesContainer();
-    const existingNotes = document.querySelectorAll('.sticky-note');
+    const shadowRoot = getShadowRoot();
+    if (!shadowRoot) return;
+    const existingNotes = shadowRoot.querySelectorAll('.sticky-note');
     existingNotes.forEach((note) => note.remove());
 
     for (const id in notes) {
@@ -178,9 +212,11 @@
 
     // Update the note data
     notes[noteId].backgroundColor = newColor;
+    const shadowRoot = getShadowRoot();
+    if (!shadowRoot) return;
 
     // Update the note element classes
-    const noteElement = document.querySelector(
+    const noteElement = shadowRoot.querySelector(
       `.sticky-note[data-id='${noteId}']`,
     );
     if (noteElement) {
@@ -461,7 +497,9 @@
   };
 
   const bringToFront = (id) => {
-    const noteElements = document.querySelectorAll('.sticky-note');
+    const shadowRoot = getShadowRoot();
+    if (!shadowRoot) return;
+    const noteElements = shadowRoot.querySelectorAll('.sticky-note');
     let maxZ = 0;
     noteElements.forEach((el) => {
       // zIndex can be 'auto', so we parse it and default to 0 if it's not a number.
@@ -477,7 +515,7 @@
     if (notes[id]) {
       notes[id].zIndex = newZIndex;
       const noteElement = /** @type {HTMLDivElement} */ (
-        document.querySelector(`.sticky-note[data-id='${id}']`)
+        shadowRoot.querySelector(`.sticky-note[data-id='${id}']`)
       );
       if (noteElement) {
         noteElement.style.zIndex = newZIndex.toString();
@@ -582,7 +620,9 @@
   };
 
   const toggleMinimize = (id) => {
-    const noteElement = document.querySelector(`.sticky-note[data-id='${id}']`);
+    const shadowRoot = getShadowRoot();
+    if (!shadowRoot) return;
+    const noteElement = shadowRoot.querySelector(`.sticky-note[data-id='${id}']`);
     if (!noteElement || !notes[id]) return;
 
     const isMinimized = noteElement.classList.contains('minimized');
@@ -622,8 +662,10 @@
       notes[id].content = content;
       notes[id].lastEditTimestamp = lastEditTimestamp[id] || Date.now();
 
+      const shadowRoot = getShadowRoot();
+      if (!shadowRoot) return;
       // Update header text if note is minimized (use plain text)
-      const noteElement = document.querySelector(
+      const noteElement = shadowRoot.querySelector(
         `.sticky-note[data-id='${id}']`,
       );
       if (noteElement && noteElement.classList.contains('minimized')) {
@@ -657,7 +699,9 @@
     delete lastEditTimestamp[id];
     delete isActivelyEditing[id];
     saveNotes();
-    const noteElement = document.querySelector(`.sticky-note[data-id='${id}']`);
+    const shadowRoot = getShadowRoot();
+    if (!shadowRoot) return;
+    const noteElement = shadowRoot.querySelector(`.sticky-note[data-id='${id}']`);
     if (noteElement) {
       noteElement.remove();
     }
@@ -706,6 +750,9 @@
       const newNotes = changes.notes.newValue || {};
       notes = newNotes; // Keep local notes object in sync
 
+      const shadowRoot = getShadowRoot();
+      if (!shadowRoot) return;
+
       // Handle deleted notes
       for (const id in oldNotes) {
         if (!newNotes[id]) {
@@ -725,7 +772,7 @@
           delete lastEditTimestamp[id];
           delete isActivelyEditing[id];
 
-          const noteElement = document.querySelector(
+          const noteElement = shadowRoot.querySelector(
             `.sticky-note[data-id='${id}']`,
           );
           if (noteElement) {
@@ -738,7 +785,7 @@
       for (const id in newNotes) {
         const noteData = newNotes[id];
         let noteElement = /** @type {HTMLDivElement} */ (
-          document.querySelector(`.sticky-note[data-id='${id}']`)
+          shadowRoot.querySelector(`.sticky-note[data-id='${id}']`)
         );
 
         if (!noteElement) {
@@ -863,7 +910,7 @@
           // Update content only if this page is not actively editing the note
           const instance = tinyMdeInstances[id];
           const tinyMde = instance ? instance.editor || instance : null;
-          const currentNoteElement = document.querySelector(
+          const currentNoteElement = shadowRoot.querySelector(
             `.sticky-note[data-id='${id}']`,
           );
           const textarea = currentNoteElement
@@ -928,7 +975,9 @@
   const focusNote = (id) => {
     const instance = tinyMdeInstances[id];
     const tinyMde = instance ? instance.editor || instance : null;
-    const noteElement = document.querySelector(`.sticky-note[data-id='${id}']`);
+    const shadowRoot = getShadowRoot();
+    if (!shadowRoot) return false;
+    const noteElement = shadowRoot.querySelector(`.sticky-note[data-id='${id}']`);
 
     if (!noteElement) {
       console.log(`Note element not found for id: ${id}`);
@@ -1073,8 +1122,11 @@
       }
     }
 
+    const shadowRoot = getShadowRoot();
+    if (!shadowRoot) return;
+
     // Also blur any focused textareas (fallback case)
-    const focusedTextareas = document.querySelectorAll(
+    const focusedTextareas = shadowRoot.querySelectorAll(
       '.sticky-note-content textarea:focus',
     );
     focusedTextareas.forEach((textarea) => {
@@ -1102,11 +1154,14 @@
 
   // Close color dropdowns when clicking outside
   document.addEventListener('click', (e) => {
-    const dropdowns = document.querySelectorAll('.color-dropdown-menu.show');
+    const shadowRoot = getShadowRoot();
+    if (!shadowRoot) return;
+
+    const dropdowns = shadowRoot.querySelectorAll('.color-dropdown-menu.show');
     dropdowns.forEach((dropdown) => {
       const colorDropdown = dropdown.closest('.color-dropdown');
       const target = /** @type {Node} */ (e.target);
-      if (colorDropdown && target && !colorDropdown.contains(target)) {
+      if (colorDropdown && target && !e.composedPath().includes(colorDropdown)) {
         dropdown.classList.remove('show');
       }
     });
@@ -1115,7 +1170,9 @@
   // Also close dropdowns on escape key
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      const dropdowns = document.querySelectorAll('.color-dropdown-menu.show');
+      const shadowRoot = getShadowRoot();
+      if (!shadowRoot) return;
+      const dropdowns = shadowRoot.querySelectorAll('.color-dropdown-menu.show');
       dropdowns.forEach((dropdown) => {
         dropdown.classList.remove('show');
       });

@@ -18,10 +18,17 @@
       "js": [
         "libs/tiny-mde.min.js",
         "src/contentScripts/notes.js"
-      ],
-      "css": [
+      ]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
         "libs/tiny-mde.min.css",
         "src/contentScripts/notes.css"
+      ],
+      "matches": [
+        "<all_urls>"
       ]
     }
   ],
