@@ -1,3 +1,4 @@
+/* global BundledCode */
 (() => {
   const heroicons = {
     close: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -305,6 +306,52 @@
     editor.textContent = note.content || '';
     noteContent.appendChild(editor);
 
+    // Create rendered markdown view (hidden by default)
+    const rendered = document.createElement('div');
+    rendered.classList.add('sticky-note-rendered');
+    rendered.style.display = 'none';
+    noteContent.appendChild(rendered);
+
+    // Open links in rendered view in a new tab and prevent entering edit mode
+    rendered.addEventListener('click', (e) => {
+      const target = /** @type {HTMLElement} */ (e.target);
+      const anchor = target?.closest('a');
+      if (anchor) {
+        e.preventDefault();
+        e.stopPropagation();
+        let href = anchor.getAttribute('href');
+        if (href) {
+          if (!href.startsWith('http')) {
+            href = 'https://' + href;
+          }
+          window.open(href, '_blank');
+        }
+      }
+    });
+
+    // Helper to render markdown and show rendered view
+    const showRendered = () => {
+      try {
+        const md = notes[id]?.content ?? editor.innerText ?? '';
+        // Use bundled marked library if present on globalThis
+        const g = /** @type {any} */ (globalThis);
+        const html = g?.BundledCode?.marked
+          ? g.BundledCode.marked.parse(md)
+          : md;
+        rendered.innerHTML = html;
+      } catch {
+        rendered.textContent = notes[id]?.content ?? editor.innerText ?? '';
+      }
+      rendered.style.display = 'block';
+      editor.style.display = 'none';
+    };
+
+    // Helper to show plain editor
+    const showEditor = () => {
+      rendered.style.display = 'none';
+      editor.style.display = 'block';
+    };
+
     const handleEditorChange = () => {
       const content = editor.innerText;
       lastEditTimestamp[id] = Date.now();
@@ -338,11 +385,44 @@
       e.stopPropagation();
     });
 
+    // Toggle rendered view when editor loses focus
+    // When the editor loses focus, schedule a render. Using a small timeout
+    // avoids races with immediate focus shifts within the note (e.g., header buttons)
+    editor.addEventListener('blur', () => {
+      setTimeout(() => {
+        const active = document.activeElement;
+        const stillInThisNote = active && noteElement.contains(active);
+        const isHeaderButton = active && noteHeader.contains(active);
+        if (!stillInThisNote || isHeaderButton) {
+          showRendered();
+        }
+      }, 0);
+    });
+
+    // When the note is showing rendered markdown, clicking anywhere on it
+    // (except on anchors inside rendered view) switches back to editor
+    noteElement.addEventListener('click', (e) => {
+      const isRenderedVisible = rendered.style.display !== 'none';
+      if (!isRenderedVisible) return;
+      const t = /** @type {HTMLElement} */ (e.target);
+      if (t && rendered.contains(t) && t.closest('a')) {
+        // Anchor click handled separately
+        return;
+      }
+      showEditor();
+      // Focus editor after switching
+      try {
+        /** @type {HTMLElement} */ (editor).focus();
+      } catch {}
+    });
+
     // Paste as plain text only
     editor.addEventListener('paste', (e) => {
       e.stopPropagation();
       e.preventDefault();
-      const text = (e.clipboardData || window.clipboardData).getData('text');
+      const text = (
+        e.clipboardData || /** @type {any} */ (window).clipboardData
+      ).getData('text');
       try {
         if (
           document.queryCommandSupported &&
@@ -388,6 +468,11 @@
         setTimeout(() => focusNote(id), 10);
       }
     }, 100);
+
+    // Initial state: show rendered if editor is not focused
+    if (document.activeElement !== editor) {
+      showRendered();
+    }
   };
 
   const bringToFront = (id) => {
@@ -579,11 +664,17 @@
     const noteContent = noteElement.querySelector('.sticky-note-content');
     if (!noteContent) return;
 
-    // Measure content height of contenteditable editor
+    // Measure content height of the visible view (editor or rendered)
     const editor = /** @type {HTMLDivElement} */ (
       noteContent.querySelector('.sticky-note-editor')
     );
-    let contentHeight = editor ? editor.scrollHeight : 0;
+    const rendered = /** @type {HTMLDivElement} */ (
+      noteContent.querySelector('.sticky-note-rendered')
+    );
+    const editorVisible =
+      editor && window.getComputedStyle(editor).display !== 'none';
+    const target = editorVisible && editor ? editor : rendered || editor;
+    let contentHeight = target ? target.scrollHeight : 0;
 
     if (contentHeight > 0) {
       // Add some padding for the header and a bit of extra space
@@ -963,8 +1054,8 @@
           clickTarget.dispatchEvent(clickEvent);
 
           // Then try to focus again
-          if (clickTarget.focus) {
-            clickTarget.focus();
+          if (/** @type {any} */ (clickTarget).focus) {
+            /** @type {any} */ (clickTarget).focus();
           }
 
           focused = true;
@@ -1018,6 +1109,12 @@
     if (document.hidden) {
       // Page is now hidden (user switched tabs, minimized window, etc.)
       blurAllStickyNotes();
+    } else {
+      // Tab became visible: refresh notes from storage and re-render
+      chrome.storage.sync.get('notes', (data) => {
+        notes = data.notes || {};
+        renderNotes();
+      });
     }
   });
 

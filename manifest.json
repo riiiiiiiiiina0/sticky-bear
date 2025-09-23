@@ -23,6 +23,7 @@
         "<all_urls>"
       ],
       "js": [
+        "libs/marked@16.3.0.js",
         "src/contentScripts/notes.js"
       ],
       "css": [
