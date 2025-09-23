@@ -10,6 +10,8 @@ let notes = {};
 const debouncedSaveNotes = debounce(() => saveNotes(), 300);
 let stickyNotesContainer = null;
 let isDragging = false;
+let lastEditTimestamp = {}; // Track last edit time for each note
+let isActivelyEditing = {}; // Track which notes are being actively edited
 
 // === Device Pixel Ratio (DPR) handling ===
 const localDpr = window.devicePixelRatio;
@@ -121,9 +123,53 @@ const createNoteElement = (id, note) => {
   noteContent.classList.add('sticky-note-content');
   noteContent.setAttribute('contenteditable', 'true');
   noteContent.innerText = note.content;
-  noteContent.addEventListener('input', (e) =>
-    updateNoteContent(id, /** @type {HTMLDivElement} */ (e.target).innerText),
-  );
+  noteContent.addEventListener('input', (e) => {
+    const content = /** @type {HTMLDivElement} */ (e.target).innerText;
+    lastEditTimestamp[id] = Date.now();
+    isActivelyEditing[id] = true;
+    updateNoteContent(id, content);
+
+    // Clear the actively editing flag after a short delay
+    setTimeout(() => {
+      isActivelyEditing[id] = false;
+    }, 1000);
+  });
+
+  // Prevent keyboard events from bubbling to the page
+  noteContent.addEventListener('keydown', (e) => {
+    e.stopPropagation();
+  });
+
+  noteContent.addEventListener('keyup', (e) => {
+    e.stopPropagation();
+  });
+
+  noteContent.addEventListener('keypress', (e) => {
+    e.stopPropagation();
+  });
+
+  // Maintain focus when clicking inside the content area
+  noteContent.addEventListener('mousedown', (e) => {
+    e.stopPropagation();
+  });
+
+  noteContent.addEventListener('click', (e) => {
+    e.stopPropagation();
+    // Ensure the content area gets focus when clicked
+    noteContent.focus();
+  });
+
+  // Prevent focus loss when interacting with the content
+  noteContent.addEventListener('blur', (e) => {
+    // Small delay to check if focus moved to another part of the same note
+    setTimeout(() => {
+      const activeElement = document.activeElement;
+      if (activeElement && !noteElement.contains(activeElement)) {
+        // Focus moved outside the note, this is expected behavior
+        return;
+      }
+    }, 10);
+  });
 
   const resizeHandle = document.createElement('div');
   resizeHandle.classList.add('resize-handle');
@@ -289,6 +335,7 @@ const toggleMinimize = (id) => {
 const updateNoteContent = (id, content) => {
   if (notes[id]) {
     notes[id].content = content;
+    notes[id].lastEditTimestamp = lastEditTimestamp[id] || Date.now();
 
     // Update header text if note is minimized
     const noteElement = document.querySelector(`.sticky-note[data-id='${id}']`);
@@ -389,18 +436,84 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
           noteElement.classList.remove('minimized');
         }
 
-        // Update content only if the element is not focused
+        // Update content only if this page is not actively editing the note
         const contentElement = /** @type {HTMLDivElement} */ (
           noteElement.querySelector('.sticky-note-content')
         );
-        if (document.activeElement !== contentElement) {
-          if (contentElement.innerText !== noteData.content) {
-            contentElement.innerText = noteData.content;
+
+        // Check if we should update the content
+        const shouldUpdate =
+          !isActivelyEditing[id] &&
+          (document.activeElement !== contentElement ||
+            (noteData.lastEditTimestamp &&
+              noteData.lastEditTimestamp > (lastEditTimestamp[id] || 0)));
+
+        if (shouldUpdate && contentElement.innerText !== noteData.content) {
+          // Store cursor position if element is focused
+          let cursorPosition = 0;
+          const wasFocused = document.activeElement === contentElement;
+          if (wasFocused) {
+            const selection = window.getSelection();
+            if (selection && selection.rangeCount > 0) {
+              const range = selection.getRangeAt(0);
+              cursorPosition = range.startOffset;
+            }
+          }
+
+          contentElement.innerText = noteData.content;
+          lastEditTimestamp[id] = noteData.lastEditTimestamp || Date.now();
+
+          // Restore cursor position if element was focused
+          if (wasFocused) {
+            contentElement.focus();
+            const range = document.createRange();
+            const textNode = contentElement.firstChild;
+            if (textNode && textNode.textContent) {
+              const maxOffset = Math.min(
+                cursorPosition,
+                textNode.textContent.length,
+              );
+              range.setStart(textNode, maxOffset);
+              range.setEnd(textNode, maxOffset);
+              const selection = window.getSelection();
+              if (selection) {
+                selection.removeAllRanges();
+                selection.addRange(range);
+              }
+            }
           }
         }
       }
     }
   }
+});
+
+// Function to blur all focused sticky notes and clear editing flags
+const blurAllStickyNotes = () => {
+  const focusedContents = document.querySelectorAll(
+    '.sticky-note-content:focus',
+  );
+  focusedContents.forEach((content) => {
+    /** @type {HTMLDivElement} */ (content).blur();
+  });
+
+  // Clear actively editing flags for all notes
+  for (const id in isActivelyEditing) {
+    isActivelyEditing[id] = false;
+  }
+};
+
+// Blur all focused sticky notes when page becomes invisible
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    // Page is now hidden (user switched tabs, minimized window, etc.)
+    blurAllStickyNotes();
+  }
+});
+
+// Additional safeguard for window blur events
+window.addEventListener('blur', () => {
+  blurAllStickyNotes();
 });
 
 loadNotes();

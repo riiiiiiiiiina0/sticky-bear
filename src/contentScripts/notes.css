@@ -69,6 +69,11 @@
   outline: none;
   overflow: auto;
   line-height: 1.4;
+  cursor: text;
+}
+
+.sticky-note-content:focus {
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .resize-handle {
@@ -133,5 +138,9 @@
 
   .header-text {
     color: #ccc;
+  }
+
+  .sticky-note-content:focus {
+    background-color: rgba(0, 0, 0, 0.1);
   }
 }
