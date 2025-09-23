@@ -1,9 +1,9 @@
 chrome.action.onClicked.addListener((activeTab) => {
   const newNoteId = Date.now().toString();
   const newNote = {
-    content: "New note",
-    left: "100px",
-    top: "100px",
+    content: '',
+    left: '100px',
+    top: '100px',
   };
 
   // First, save the new note to storage. This is the source of truth.
@@ -14,14 +14,18 @@ chrome.action.onClicked.addListener((activeTab) => {
       // After saving, send a message to the active tab to focus the new note.
       // The note element will be created by the onChanged listener in all tabs.
       if (activeTab.id) {
-         chrome.tabs.sendMessage(activeTab.id, {
-          action: "focus_note",
-          id: newNoteId,
-        }, (response) => {
-          if (chrome.runtime.lastError) {
-            // Ignore errors, e.g., if the content script isn't ready.
-          }
-        });
+        chrome.tabs.sendMessage(
+          activeTab.id,
+          {
+            action: 'focus_note',
+            id: newNoteId,
+          },
+          (response) => {
+            if (chrome.runtime.lastError) {
+              // Ignore errors, e.g., if the content script isn't ready.
+            }
+          },
+        );
       }
     });
   });
@@ -31,10 +35,50 @@ chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install' || details.reason === 'update') {
     chrome.tabs.query({}, (tabs) => {
       tabs.forEach((tab) => {
-        if (tab.id && tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('edge://')) {
+        if (
+          tab.id &&
+          tab.url &&
+          !tab.url.startsWith('chrome://') &&
+          !tab.url.startsWith('edge://')
+        ) {
           chrome.tabs.reload(tab.id);
         }
       });
     });
+  }
+});
+
+// Device pixel ratio management
+let maxDevicePixelRatio = 1;
+
+// Listen for DPR reports from content scripts
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (
+    message.action === 'device_pixel_ratio' &&
+    typeof message.dpr === 'number'
+  ) {
+    const newDpr = message.dpr;
+    if (newDpr > maxDevicePixelRatio) {
+      maxDevicePixelRatio = newDpr;
+      // Broadcast the updated DPR to all tabs
+      chrome.tabs.query({}, (tabs) => {
+        tabs.forEach((tab) => {
+          if (tab.id) {
+            chrome.tabs.sendMessage(tab.id, {
+              action: 'update_dpr',
+              dpr: maxDevicePixelRatio,
+            });
+          }
+        });
+      });
+    } else {
+      // Reply current max DPR to the sender so it can sync if needed
+      if (sender.tab && sender.tab.id) {
+        chrome.tabs.sendMessage(sender.tab.id, {
+          action: 'update_dpr',
+          dpr: maxDevicePixelRatio,
+        });
+      }
+    }
   }
 });

@@ -11,11 +11,47 @@ const debouncedSaveNotes = debounce(() => saveNotes(), 300);
 let stickyNotesContainer = null;
 let isDragging = false;
 
+// === Device Pixel Ratio (DPR) handling ===
+const localDpr = window.devicePixelRatio;
+let unifiedDpr = localDpr; // Will be updated from background script
+
+// Report current DPR to background (debounced for resize)
+const reportDpr = () => {
+  chrome.runtime.sendMessage({
+    action: 'device_pixel_ratio',
+    dpr: window.devicePixelRatio,
+  });
+};
+
+// Debounce resize DPR reports
+window.addEventListener('resize', debounce(reportDpr, 300));
+// Initial report
+reportDpr();
+
+// Apply scale to the sticky notes container so that logical sizes match unified DPR
+const applyContainerScale = () => {
+  if (!stickyNotesContainer) return;
+  const scale = unifiedDpr / window.devicePixelRatio;
+  stickyNotesContainer.style.transformOrigin = '0 0';
+  stickyNotesContainer.style.transform = `scale(${scale})`;
+};
+
+// Listen for DPR updates from background script
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === 'update_dpr' && typeof message.dpr === 'number') {
+    unifiedDpr = message.dpr;
+    applyContainerScale();
+  }
+});
+
+// Ensure scale is applied once the container exists
 const initializeStickyNotesContainer = () => {
   if (!stickyNotesContainer) {
     stickyNotesContainer = document.createElement('div');
     stickyNotesContainer.classList.add('sticky-notes-container');
     document.body.appendChild(stickyNotesContainer);
+    // Apply scaling based on unified DPR when container is first created
+    applyContainerScale();
   }
 };
 
