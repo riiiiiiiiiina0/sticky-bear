@@ -1,17 +1,26 @@
 {
   "manifest_version": 3,
-  "name": "Global Sticky Notes",
+  "name": "Sticky Bear",
   "version": "1.0",
-  "description": "Create and manage sticky notes across all tabs.",
-  "permissions": ["storage", "tabs"],
+  "description": "Create and manage sticky notes across all tabs and pages.",
+  "permissions": [
+    "storage",
+    "tabs"
+  ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "src/background.js"
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "css": ["styles.css"]
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "src/contentScripts/notes.js"
+      ],
+      "css": [
+        "src/contentScripts/notes.css"
+      ]
     }
   ],
   "action": {
