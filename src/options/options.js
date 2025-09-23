@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Export functionality
   if (exportButton) {
     exportButton.addEventListener('click', () => {
-      chrome.storage.local.get('notes', (data) => {
+      chrome.storage.sync.get('notes', (data) => {
         if (chrome.runtime.lastError) {
           alert('Error fetching notes: ' + chrome.runtime.lastError.message);
           return;
@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
 
           // Save the new notes to storage
-          chrome.storage.local.set({ notes: importedNotes }, () => {
+          chrome.storage.sync.set({ notes: importedNotes }, () => {
             if (chrome.runtime.lastError) {
               alert(
                 'Error importing notes: ' + chrome.runtime.lastError.message,
@@ -115,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (deleteAllButton) {
     deleteAllButton.addEventListener('click', () => {
       // First check if there are any notes to delete
-      chrome.storage.local.get('notes', (data) => {
+      chrome.storage.sync.get('notes', (data) => {
         if (chrome.runtime.lastError) {
           alert('Error checking notes: ' + chrome.runtime.lastError.message);
           return;
@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (confirm(confirmMessage)) {
           // Clear all notes from storage
-          chrome.storage.local.set({ notes: {} }, () => {
+          chrome.storage.sync.set({ notes: {} }, () => {
             if (chrome.runtime.lastError) {
               alert(
                 'Error deleting notes: ' + chrome.runtime.lastError.message,

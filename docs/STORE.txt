@@ -1,0 +1,31 @@
+Sticky Bear – Sticky Notes Everywhere
+
+Organize your thoughts, tasks, and inspiration right where they happen! Sticky Bear lets you pin colorful, resizable sticky notes to any web page and keeps them there so you can pick up exactly where you left off.
+
+━━━━━━━━━━
+⭐️ KEY FEATURES
+━━━━━━━━━━
+• Create unlimited sticky notes on ANY website
+• Notes stay anchored to the exact spot across reloads, tabs & sessions
+• Rich-text Markdown editor with toolbar (bold, lists, links, code-blocks)
+• Drag-and-drop to position and resize notes
+• Multiple color themes & font sizes for perfect readability
+• Keyboard shortcuts: Alt + N – new note, Alt + W – delete focused note
+• Quick search & overview panel to find notes fast
+• Import / export notes as JSON for backup or sharing
+• Runs 100 % offline – your data never leaves your browser
+
+━━━━━━━━━━
+🔒 PRIVACY & PERMISSIONS
+━━━━━━━━━━
+Sticky Bear is private by design. All notes are stored locally using Chrome’s `storage` API. We never collect, transmit, or sell any data. Requested permissions are strictly for:
+• Storage – save your notes
+• Tabs – know which tab you’re on for proper note placement
+
+━━━━━━━━━━
+💡 HOW TO USE
+━━━━━━━━━━
+1. Click the Sticky Bear toolbar button (or press Alt + N) to create a note.
+2. Type away, drag to move, grab the corner to resize.
+3. Click outside the note or press Esc – it saves automatically.
+4. Return anytime; your note is still there!

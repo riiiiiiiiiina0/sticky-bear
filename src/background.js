@@ -105,7 +105,7 @@ const createNewNote = async (activeTab) => {
     const viewportWidth = tab.width || 1400; // Fallback to 1400 if width not available
 
     // Get existing notes to determine optimal position
-    chrome.storage.local.get({ notes: {} }, (data) => {
+    chrome.storage.sync.get({ notes: {} }, (data) => {
       const notes = data.notes;
 
       // Find a non-overlapping position using actual tab width
@@ -118,7 +118,7 @@ const createNewNote = async (activeTab) => {
       };
 
       notes[newNoteId] = newNote;
-      chrome.storage.local.set({ notes }, () => {
+      chrome.storage.sync.set({ notes }, () => {
         // After saving, send a message to the active tab to focus the new note.
         // The note element will be created by the onChanged listener in all tabs.
         if (activeTab.id) {
@@ -146,7 +146,7 @@ const createNewNote = async (activeTab) => {
 
 // Fallback function for when tab width is not available
 const createNoteWithFallback = (newNoteId, activeTab) => {
-  chrome.storage.local.get({ notes: {} }, (data) => {
+  chrome.storage.sync.get({ notes: {} }, (data) => {
     const notes = data.notes;
     const position = findNonOverlappingPosition(notes, 1400); // Default fallback width
 
@@ -157,7 +157,7 @@ const createNoteWithFallback = (newNoteId, activeTab) => {
     };
 
     notes[newNoteId] = newNote;
-    chrome.storage.local.set({ notes }, () => {
+    chrome.storage.sync.set({ notes }, () => {
       if (activeTab.id) {
         chrome.tabs.sendMessage(
           activeTab.id,

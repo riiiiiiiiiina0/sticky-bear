@@ -115,7 +115,7 @@
 
   const loadNotes = () => {
     initializeStickyNotesContainer();
-    chrome.storage.local.get('notes', (data) => {
+    chrome.storage.sync.get('notes', (data) => {
       if (data.notes) {
         notes = data.notes;
         renderNotes();
@@ -737,7 +737,7 @@
   };
 
   const saveNotes = () => {
-    chrome.storage.local.set({ notes });
+    chrome.storage.sync.set({ notes });
   };
 
   // Function to get the currently focused note ID
