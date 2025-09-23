@@ -13,7 +13,7 @@
 
 .sticky-notes-container.collapsed .sticky-note {
   left: 0 !important;
-  transform: translateX(-90%);
+  transform: translateX(calc(-100% + 15px));
 }
 .sticky-notes-container.collapsing .sticky-note {
   transition: all 0.3s ease-in-out;
