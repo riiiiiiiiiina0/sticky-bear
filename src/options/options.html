@@ -1,32 +1,41 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sticky Bear Options</title>
-    <link rel="stylesheet" href="options.css" />
-  </head>
-  <body>
-    <div class="container">
-      <h1>Sticky Bear Options</h1>
 
-      <div class="card">
-        <h2>Export Notes</h2>
-        <p>Save all your sticky notes to a JSON file.</p>
-        <button id="export-button">Export Notes</button>
-      </div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sticky Bear Options</title>
+  <link rel="icon" type="image/png" sizes="16x16" href="../../icons/icon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../../icons/icon-32x32.png">
+  <link rel="icon" type="image/png" sizes="48x48" href="../../icons/icon-48x48.png">
+  <link rel="stylesheet" href="options.css" />
+</head>
 
-      <div class="card">
-        <h2>Import Notes</h2>
-        <p>
-          Load notes from a JSON backup file.
-          <strong>This will overwrite all current notes.</strong>
-        </p>
-        <input type="file" id="import-file" accept=".json" hidden />
-        <button id="import-button">Choose File & Import</button>
-      </div>
+<body>
+  <div class="container">
+    <h1>
+      <img src="../../icons/icon-128x128.png" alt="Sticky Bear" class="header-icon">
+      Sticky Bear Options
+    </h1>
+
+    <div class="card">
+      <h2>Export Notes</h2>
+      <p>Save all your sticky notes to a JSON file.</p>
+      <button id="export-button">Export Notes</button>
     </div>
 
-    <script src="options.js"></script>
-  </body>
+    <div class="card">
+      <h2>Import Notes</h2>
+      <p>
+        Load notes from a JSON backup file.
+        <strong>This will overwrite all current notes.</strong>
+      </p>
+      <input type="file" id="import-file" accept=".json" hidden />
+      <button id="import-button">Choose File & Import</button>
+    </div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+
 </html>
