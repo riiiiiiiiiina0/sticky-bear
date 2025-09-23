@@ -94,7 +94,10 @@
   const initializeStickyNotesContainer = () => {
     if (!stickyNotesContainer) {
       stickyNotesContainer = document.createElement('div');
-      stickyNotesContainer.classList.add('sticky-notes-container');
+      stickyNotesContainer.classList.add(
+        'sticky-notes-container',
+        'sunny-bear-excluded',
+      );
       document.body.appendChild(stickyNotesContainer);
       // Apply scaling based on unified DPR when container is first created
       applyContainerScale();
