@@ -60,11 +60,8 @@ button:hover {
   background-color: #0056b3;
 }
 
-.import-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
+/* Add margin to buttons that are direct children of a card */
+.card > button {
   margin-top: 15px;
 }
 

@@ -41,10 +41,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Import functionality
   if (importButton && importFile) {
+    // When the import button is clicked, trigger the hidden file input
     importButton.addEventListener('click', () => {
+      importFile.click();
+    });
+
+    // When a file is selected, start the import process
+    importFile.addEventListener('change', () => {
       if (importFile.files.length === 0) {
-        alert('Please select a file to import.');
-        return;
+        return; // No file selected
       }
 
       const file = importFile.files[0];
@@ -54,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
           const importedNotes = JSON.parse(event.target.result);
 
-          // Basic validation: check if it's a non-null object
+          // Basic validation
           if (
             typeof importedNotes !== 'object' ||
             importedNotes === null ||
@@ -63,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
             throw new Error('Invalid file format.');
           }
 
-          // Overwrite existing notes with the imported ones
+          // Save the new notes to storage
           chrome.storage.local.set({ notes: importedNotes }, () => {
             if (chrome.runtime.lastError) {
               alert(
@@ -77,11 +82,16 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         } catch (e) {
           alert('Error parsing JSON file: ' + e.message);
+        } finally {
+          // Reset file input to allow re-importing the same file
+          importFile.value = '';
         }
       };
 
       reader.onerror = () => {
         alert('Error reading the file.');
+        // Reset file input
+        importFile.value = '';
       };
 
       reader.readAsText(file);
