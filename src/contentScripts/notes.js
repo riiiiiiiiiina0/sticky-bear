@@ -1,4 +1,13 @@
 (() => {
+  const heroicons = {
+    close: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+</svg>`,
+    expand: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+  <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" />
+</svg>`,
+  };
+
   const debounce = (func, delay) => {
     let timeout;
     return (...args) => {
@@ -269,13 +278,19 @@
       note.backgroundColor || 'yellow',
     );
 
+    const expandButton = document.createElement('button');
+    expandButton.classList.add('expand-note', 'sticky-note-header-button');
+    expandButton.innerHTML = heroicons.expand;
+    expandButton.addEventListener('click', () => expandNoteToContent(id));
+
     const deleteButton = document.createElement('button');
-    deleteButton.classList.add('delete-note');
-    deleteButton.innerHTML = '&times;';
+    deleteButton.classList.add('delete-note', 'sticky-note-header-button');
+    deleteButton.innerHTML = heroicons.close;
     deleteButton.addEventListener('click', () => deleteNote(id));
 
     noteHeader.appendChild(headerText);
     noteHeader.appendChild(colorDropdown);
+    noteHeader.appendChild(expandButton);
     noteHeader.appendChild(deleteButton);
 
     // Create container for TinyMDE editor
@@ -641,6 +656,47 @@
       }
 
       debouncedSaveNotes();
+    }
+  };
+
+  const expandNoteToContent = (id) => {
+    const noteElement = document.querySelector(`.sticky-note[data-id='${id}']`);
+    if (!noteElement || !notes[id]) return;
+
+    // Get the content area
+    const noteContent = noteElement.querySelector('.sticky-note-content');
+    if (!noteContent) return;
+
+    // Get the TinyMDE editor or textarea to measure content
+    const tinyMdeContainer = noteContent.querySelector('.TinyMDE');
+    const textarea = noteContent.querySelector('textarea');
+
+    let contentHeight = 0;
+
+    if (tinyMdeContainer) {
+      // For TinyMDE, we need to get the scrollHeight of the content
+      const editorElement =
+        tinyMdeContainer.querySelector('.TinyMDE-editor') || tinyMdeContainer;
+      contentHeight = editorElement.scrollHeight;
+    } else if (textarea) {
+      // For regular textarea, use scrollHeight
+      contentHeight = textarea.scrollHeight;
+    }
+
+    if (contentHeight > 0) {
+      // Add some padding for the header and a bit of extra space
+      const headerHeight = 20; // Height of the sticky note header
+      const padding = 20; // Extra padding for better visual appearance
+      const newHeight = Math.max(contentHeight + headerHeight + padding, 100); // Minimum height of 100px
+
+      // Update the note element height
+      /** @type {HTMLElement} */ (noteElement).style.height = newHeight + 'px';
+
+      // Update the stored height
+      if (notes[id]) {
+        notes[id].height = newHeight + 'px';
+        debouncedSaveNotes();
+      }
     }
   };
 
