@@ -1,7 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const exportButton = document.getElementById('export-button');
-  const importFile = document.getElementById('import-file');
-  const importButton = document.getElementById('import-button');
+  const exportButton = /** @type {HTMLButtonElement} */ (
+    document.getElementById('export-button')
+  );
+  const importButton = /** @type {HTMLButtonElement} */ (
+    document.getElementById('import-button')
+  );
+  const importFile = /** @type {HTMLInputElement} */ (
+    document.getElementById('import-file')
+  );
 
   // Export functionality
   if (exportButton) {
@@ -48,16 +54,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // When a file is selected, start the import process
     importFile.addEventListener('change', () => {
-      if (importFile.files.length === 0) {
+      if ((importFile.files?.length ?? 0) <= 0) {
         return; // No file selected
       }
 
-      const file = importFile.files[0];
+      const file = /** @type {FileList} */ (importFile.files)[0];
       const reader = new FileReader();
 
       reader.onload = (event) => {
         try {
-          const importedNotes = JSON.parse(event.target.result);
+          const result = event.target?.result;
+          if (typeof result !== 'string') {
+            throw new Error('Invalid file format.');
+          }
+          const importedNotes = JSON.parse(result);
 
           // Basic validation
           if (
