@@ -64,7 +64,7 @@
   let isDragging = false;
   let lastEditTimestamp = {}; // Track last edit time for each note
   let isActivelyEditing = {}; // Track which notes are being actively edited
-  let tinyMdeInstances = {}; // Track TinyMDE editor instances for each note
+  // Plain text contenteditable editor; no TinyMDE instances needed
 
   // === Device Pixel Ratio (DPR) handling ===
   const localDpr = window.devicePixelRatio;
@@ -293,178 +293,76 @@
     noteHeader.appendChild(expandButton);
     noteHeader.appendChild(deleteButton);
 
-    // Create container for TinyMDE editor
+    // Create content container
     const noteContent = document.createElement('div');
     noteContent.classList.add('sticky-note-content');
     noteContent.setAttribute('tabindex', '0'); // Make it focusable
 
-    // Create textarea for TinyMDE
-    const textarea = document.createElement('textarea');
-    textarea.value = note.content || '';
-    noteContent.appendChild(textarea);
+    // Create plain text contenteditable editor
+    const editor = document.createElement('div');
+    editor.classList.add('sticky-note-editor');
+    editor.setAttribute('contenteditable', 'true');
+    editor.textContent = note.content || '';
+    noteContent.appendChild(editor);
 
-    // Initialize TinyMDE editor with error handling
-    let tinyMde = null;
-    try {
-      // @ts-ignore - TinyMDE is loaded via script tag
-      if (typeof TinyMDE !== 'undefined' && TinyMDE.Editor) {
-        console.log(`Initializing TinyMDE for note ${id}`);
-        // @ts-ignore - TinyMDE is loaded via script tag
-        tinyMde = new TinyMDE.Editor({
-          element: textarea,
-        });
+    const handleEditorChange = () => {
+      const content = editor.innerText;
+      lastEditTimestamp[id] = Date.now();
+      isActivelyEditing[id] = true;
+      updateNoteContent(id, content);
+      setTimeout(() => {
+        isActivelyEditing[id] = false;
+      }, 1000);
+    };
 
-        console.log(`TinyMDE initialized for note ${id}`, tinyMde);
-        console.log(`TinyMDE editor element:`, tinyMde.e);
-        console.log(`TinyMDE focus method:`, typeof tinyMde.focus);
+    // Input events
+    editor.addEventListener('input', () => handleEditorChange());
 
-        // Function to handle content changes
-        const handleContentChange = () => {
-          const content = tinyMde.getContent();
-          lastEditTimestamp[id] = Date.now();
-          isActivelyEditing[id] = true;
-          updateNoteContent(id, content);
+    // Prevent events from bubbling to the page
+    editor.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+    });
+    editor.addEventListener('keyup', (e) => {
+      e.stopPropagation();
+    });
+    editor.addEventListener('keypress', (e) => {
+      e.stopPropagation();
+    });
 
-          // Clear the actively editing flag after a short delay
-          setTimeout(() => {
-            isActivelyEditing[id] = false;
-          }, 1000);
-        };
+    // Maintain focus and z-order
+    editor.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      bringToFront(id);
+    });
+    editor.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
 
-        // Initialize the instance object
-        tinyMdeInstances[id] = {
-          editor: tinyMde,
-          syncInterval: null,
-          ready: false, // Track if event listeners are fully set up
-        };
-
-        // Listen for multiple types of content changes
-        tinyMde.addEventListener('change', handleContentChange);
-        tinyMde.addEventListener('input', handleContentChange);
-        tinyMde.addEventListener('selection', handleContentChange);
-
-        // Add periodic sync for TinyMDE to catch any missed changes
-        const syncInterval = setInterval(() => {
-          if (tinyMde && tinyMde.getContent) {
-            const currentContent = tinyMde.getContent();
-            if (notes[id] && notes[id].content !== currentContent) {
-              handleContentChange();
-            }
-          }
-        }, 500); // Check every 500ms
-
-        // Store the interval ID for cleanup
-        tinyMdeInstances[id].syncInterval = syncInterval;
-
-        // Mark the TinyMDE instance as ready after all event listeners are set up
-        setTimeout(() => {
-          if (tinyMdeInstances[id]) {
-            tinyMdeInstances[id].ready = true;
-          }
-        }, 10);
-
-        // Get the editor element for event handling
-        const editorElement = tinyMde.e || textarea;
-
-        // Add additional event listeners to catch list operations and other changes
-        editorElement.addEventListener('keydown', (e) => {
-          e.stopPropagation();
-
-          // Check for list-related keyboard shortcuts that might not trigger change events
-          if (e.ctrlKey || e.metaKey) {
-            // Delay check for content changes after keyboard shortcuts
-            setTimeout(handleContentChange, 100);
-          }
-        });
-
-        editorElement.addEventListener('keyup', (e) => {
-          e.stopPropagation();
-
-          // Check for Enter key (list item creation) and other keys that might change content
-          if (
-            e.key === 'Enter' ||
-            e.key === 'Backspace' ||
-            e.key === 'Delete'
-          ) {
-            setTimeout(handleContentChange, 50);
-          }
-        });
-
-        editorElement.addEventListener('keypress', (e) => {
-          e.stopPropagation();
-        });
-
-        // Maintain focus when clicking inside the content area
-        editorElement.addEventListener('mousedown', (e) => {
-          e.stopPropagation();
-          bringToFront(id);
-        });
-
-        editorElement.addEventListener('click', (e) => {
-          e.stopPropagation();
-        });
-
-        // Listen for paste events which might not trigger change events immediately
-        editorElement.addEventListener('paste', (e) => {
-          e.stopPropagation(); // Prevent paste event from bubbling to the page
-          setTimeout(handleContentChange, 100);
-        });
-      } else {
-        console.warn('TinyMDE not available, falling back to textarea');
-        // Fallback to regular textarea if TinyMDE is not available
-        textarea.style.width = '100%';
-        textarea.style.height = '100%';
-        textarea.style.border = 'none';
-        textarea.style.resize = 'none';
-        textarea.style.outline = 'none';
-        textarea.style.fontFamily = 'inherit';
-        textarea.style.fontSize = 'inherit';
-
-        textarea.addEventListener('input', (e) => {
-          const content = /** @type {HTMLTextAreaElement} */ (e.target).value;
-          lastEditTimestamp[id] = Date.now();
-          isActivelyEditing[id] = true;
-          updateNoteContent(id, content);
-
-          // Clear the actively editing flag after a short delay
-          setTimeout(() => {
-            isActivelyEditing[id] = false;
-          }, 1000);
-        });
-
-        // Prevent keyboard events from bubbling to the page
-        textarea.addEventListener('keydown', (e) => {
-          e.stopPropagation();
-        });
-
-        textarea.addEventListener('keyup', (e) => {
-          e.stopPropagation();
-        });
-
-        textarea.addEventListener('keypress', (e) => {
-          e.stopPropagation();
-        });
-
-        // Listen for paste events to prevent them from bubbling to the page
-        textarea.addEventListener('paste', (e) => {
-          e.stopPropagation(); // Prevent paste event from bubbling to the page
-        });
-
-        // Maintain focus when clicking inside the content area
-        textarea.addEventListener('mousedown', (e) => {
-          e.stopPropagation();
-          bringToFront(id);
-        });
-
-        textarea.addEventListener('click', (e) => {
-          e.stopPropagation();
-          textarea.focus();
-        });
-      }
-    } catch (error) {
-      console.error('Error initializing TinyMDE:', error);
-      // Fallback handled above
-    }
+    // Paste as plain text only
+    editor.addEventListener('paste', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text');
+      try {
+        if (
+          document.queryCommandSupported &&
+          document.queryCommandSupported('insertText')
+        ) {
+          document.execCommand('insertText', false, text);
+        } else {
+          const selection = window.getSelection();
+          if (!selection || selection.rangeCount === 0) return;
+          const range = selection.getRangeAt(0);
+          range.deleteContents();
+          range.insertNode(document.createTextNode(text));
+          range.collapse(false);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+      } catch {}
+      // Trigger save after paste
+      handleEditorChange();
+    });
 
     const resizeHandle = document.createElement('div');
     resizeHandle.classList.add('resize-handle');
@@ -479,7 +377,7 @@
     makeResizable(noteElement, resizeHandle);
 
     // Ensure the note is ready for focusing
-    // Longer delay to allow TinyMDE or textarea to be fully initialized with all event listeners
+    // Delay to allow contenteditable to be fully initialized with all event listeners
     setTimeout(() => {
       // Mark this note as ready for focus
       noteElement.setAttribute('data-ready', 'true');
@@ -681,21 +579,11 @@
     const noteContent = noteElement.querySelector('.sticky-note-content');
     if (!noteContent) return;
 
-    // Get the TinyMDE editor or textarea to measure content
-    const tinyMdeContainer = noteContent.querySelector('.TinyMDE');
-    const textarea = noteContent.querySelector('textarea');
-
-    let contentHeight = 0;
-
-    if (tinyMdeContainer) {
-      // For TinyMDE, we need to get the scrollHeight of the content
-      const editorElement =
-        tinyMdeContainer.querySelector('.TinyMDE-editor') || tinyMdeContainer;
-      contentHeight = editorElement.scrollHeight;
-    } else if (textarea) {
-      // For regular textarea, use scrollHeight
-      contentHeight = textarea.scrollHeight;
-    }
+    // Measure content height of contenteditable editor
+    const editor = /** @type {HTMLDivElement} */ (
+      noteContent.querySelector('.sticky-note-editor')
+    );
+    let contentHeight = editor ? editor.scrollHeight : 0;
 
     if (contentHeight > 0) {
       // Add some padding for the header and a bit of extra space
@@ -715,17 +603,6 @@
   };
 
   const deleteNote = (id) => {
-    // Clean up TinyMDE instance and intervals
-    if (tinyMdeInstances[id]) {
-      if (tinyMdeInstances[id].editor && tinyMdeInstances[id].editor.destroy) {
-        tinyMdeInstances[id].editor.destroy();
-      }
-      if (tinyMdeInstances[id].syncInterval) {
-        clearInterval(tinyMdeInstances[id].syncInterval);
-      }
-      delete tinyMdeInstances[id];
-    }
-
     delete notes[id];
     delete lastEditTimestamp[id];
     delete isActivelyEditing[id];
@@ -742,27 +619,18 @@
 
   // Function to get the currently focused note ID
   const getFocusedNoteId = () => {
-    // Check which note has focus in TinyMDE editors
-    for (const id in tinyMdeInstances) {
-      const instance = tinyMdeInstances[id];
-      const tinyMde = instance ? instance.editor || instance : null;
-      if (tinyMde && tinyMde.e && document.activeElement === tinyMde.e) {
-        return id;
-      }
-    }
-
-    // Check for focused textareas (fallback)
-    const focusedTextarea = document.querySelector(
-      '.sticky-note-content textarea:focus',
+    // Check for focused contenteditable editor
+    const focusedEditor = document.querySelector(
+      '.sticky-note-content .sticky-note-editor:focus',
     );
-    if (focusedTextarea) {
-      const noteElement = focusedTextarea.closest('.sticky-note');
+    if (focusedEditor) {
+      const noteElement = focusedEditor.closest('.sticky-note');
       if (noteElement) {
         return noteElement.getAttribute('data-id');
       }
     }
 
-    // Check for any focused content div
+    // Check for any focused content container
     const focusedContent = document.querySelector('.sticky-note-content:focus');
     if (focusedContent) {
       const noteElement = focusedContent.closest('.sticky-note');
@@ -837,19 +705,7 @@
       // Handle deleted notes
       for (const id in oldNotes) {
         if (!newNotes[id]) {
-          // Clean up TinyMDE instance and intervals
-          if (tinyMdeInstances[id]) {
-            if (
-              tinyMdeInstances[id].editor &&
-              tinyMdeInstances[id].editor.destroy
-            ) {
-              tinyMdeInstances[id].editor.destroy();
-            }
-            if (tinyMdeInstances[id].syncInterval) {
-              clearInterval(tinyMdeInstances[id].syncInterval);
-            }
-            delete tinyMdeInstances[id];
-          }
+          // No editor instances to clean up with contenteditable
           delete lastEditTimestamp[id];
           delete isActivelyEditing[id];
 
@@ -987,13 +843,11 @@
           }
 
           // Update content only if this page is not actively editing the note
-          const instance = tinyMdeInstances[id];
-          const tinyMde = instance ? instance.editor || instance : null;
           const currentNoteElement = document.querySelector(
             `.sticky-note[data-id='${id}']`,
           );
-          const textarea = currentNoteElement
-            ? currentNoteElement.querySelector('textarea')
+          const editor = currentNoteElement
+            ? currentNoteElement.querySelector('.sticky-note-editor')
             : null;
 
           // Check if we should update the content
@@ -1002,46 +856,30 @@
             noteData.lastEditTimestamp &&
             noteData.lastEditTimestamp > (lastEditTimestamp[id] || 0);
 
-          if (shouldUpdate) {
-            if (
-              tinyMde &&
-              tinyMde.getContent &&
-              tinyMde.getContent() !== noteData.content
-            ) {
-              // TinyMDE is available
-              let cursorPosition = 0;
-              const wasFocused =
-                tinyMde.hasFocus ||
-                (tinyMde.e && document.activeElement === tinyMde.e);
-              if (wasFocused && tinyMde.getSelection) {
-                cursorPosition = tinyMde.getSelection();
+          if (
+            shouldUpdate &&
+            editor &&
+            editor.textContent !== noteData.content
+          ) {
+            const wasFocused = document.activeElement === editor;
+            let selectionOffset = 0;
+            if (wasFocused) {
+              const selection = window.getSelection();
+              if (selection && selection.anchorNode) {
+                selectionOffset = selection.anchorOffset;
               }
-
-              if (tinyMde.setContent) {
-                tinyMde.setContent(noteData.content);
-              }
-              lastEditTimestamp[id] = noteData.lastEditTimestamp || Date.now();
-
-              // Restore cursor position if editor was focused
-              if (wasFocused && tinyMde.setSelection) {
-                tinyMde.focus();
-                tinyMde.setSelection(cursorPosition);
-              }
-            } else if (textarea && textarea.value !== noteData.content) {
-              // Fallback to textarea
-              const wasFocused = document.activeElement === textarea;
-              let cursorPosition = 0;
-              if (wasFocused) {
-                cursorPosition = textarea.selectionStart;
-              }
-
-              textarea.value = noteData.content;
-              lastEditTimestamp[id] = noteData.lastEditTimestamp || Date.now();
-
-              // Restore cursor position if textarea was focused
-              if (wasFocused) {
-                textarea.focus();
-                textarea.setSelectionRange(cursorPosition, cursorPosition);
+            }
+            editor.textContent = noteData.content || '';
+            lastEditTimestamp[id] = noteData.lastEditTimestamp || Date.now();
+            if (wasFocused) {
+              // Restore cursor to end
+              const range = document.createRange();
+              range.selectNodeContents(editor);
+              range.collapse(false);
+              const sel = window.getSelection();
+              if (sel) {
+                sel.removeAllRanges();
+                sel.addRange(range);
               }
             }
           }
@@ -1052,8 +890,6 @@
 
   // Function to focus a specific note by ID
   const focusNote = (id) => {
-    const instance = tinyMdeInstances[id];
-    const tinyMde = instance ? instance.editor || instance : null;
     const noteElement = document.querySelector(`.sticky-note[data-id='${id}']`);
 
     if (document.visibilityState !== 'visible') {
@@ -1072,48 +908,25 @@
       return false;
     }
 
-    // Check if TinyMDE instance is ready (if it exists)
-    if (instance && !instance.ready) {
-      console.log(`TinyMDE instance for note ${id} not ready yet`);
-      return false;
-    }
-
     // Try multiple focus strategies
     let focused = false;
 
-    // Strategy 1: Focus TinyMDE editor element directly
-    if (tinyMde && tinyMde.e) {
-      try {
-        tinyMde.e.focus();
-        // Set cursor at the end of content
-        const selection = window.getSelection();
-        if (selection) {
-          selection.selectAllChildren(tinyMde.e);
-          selection.collapseToEnd();
-        }
-        focused = true;
-        console.log(`TinyMDE editor focused for note ${id}`);
-      } catch (error) {
-        console.log(`TinyMDE focus failed for note ${id}:`, error);
-      }
-    }
-
-    // Strategy 2: Focus textarea directly
+    // Strategy 1: Focus contenteditable editor directly
     if (!focused) {
-      const textarea = noteElement.querySelector('textarea');
-      if (textarea) {
+      const editor = noteElement.querySelector('.sticky-note-editor');
+      if (editor) {
         try {
-          textarea.focus();
-          // Set cursor at the end
-          textarea.setSelectionRange(
-            textarea.value.length,
-            textarea.value.length,
-          );
+          /** @type {HTMLElement} */ (editor).focus();
+          const range = document.createRange();
+          range.selectNodeContents(editor);
+          range.collapse(false);
+          const selection = window.getSelection();
+          if (selection) {
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
           focused = true;
-          console.log(`Textarea focused for note ${id}`);
-        } catch (error) {
-          console.log(`Textarea focus failed for note ${id}:`, error);
-        }
+        } catch (error) {}
       }
     }
 
@@ -1133,22 +946,10 @@
       }
     }
 
-    // Strategy 4: Try TinyMDE focus method if available
-    if (!focused && tinyMde && typeof tinyMde.focus === 'function') {
-      try {
-        tinyMde.focus();
-        focused = true;
-        console.log(`TinyMDE focus() method worked for note ${id}`);
-      } catch (error) {
-        console.log(`TinyMDE focus() method failed for note ${id}:`, error);
-      }
-    }
-
     // Strategy 5: Simulate click on the editor area to activate it
     if (!focused) {
       const clickTarget =
-        (tinyMde && tinyMde.e) ||
-        noteElement.querySelector('textarea') ||
+        noteElement.querySelector('.sticky-note-editor') ||
         noteElement.querySelector('.sticky-note-content');
 
       if (clickTarget) {
@@ -1174,31 +975,22 @@
       }
     }
 
-    // Strategy 6: Force focus with selection manipulation
-    if (!focused && tinyMde && tinyMde.e) {
-      try {
-        // Force focus by manipulating the selection
-        const range = document.createRange();
-        const selection = window.getSelection();
-
-        if (tinyMde.e.firstChild) {
-          range.setStart(tinyMde.e.firstChild, 0);
-          range.setEnd(tinyMde.e.firstChild, 0);
-        } else {
-          range.selectNodeContents(tinyMde.e);
-          range.collapse(true);
-        }
-
-        if (selection) {
-          selection.removeAllRanges();
-          selection.addRange(range);
-        }
-
-        tinyMde.e.focus();
-        focused = true;
-        console.log(`Force focus with selection worked for note ${id}`);
-      } catch (error) {
-        console.log(`Force focus with selection failed for note ${id}:`, error);
+    // Strategy 6: Force focus with selection manipulation on editor
+    if (!focused) {
+      const editor = noteElement.querySelector('.sticky-note-editor');
+      if (editor) {
+        try {
+          const range = document.createRange();
+          const selection = window.getSelection();
+          range.selectNodeContents(editor);
+          range.collapse(false);
+          if (selection) {
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+          /** @type {HTMLElement} */ (editor).focus();
+          focused = true;
+        } catch (error) {}
       }
     }
 
@@ -1207,21 +999,12 @@
 
   // Function to blur all focused sticky notes and clear editing flags
   const blurAllStickyNotes = () => {
-    // Blur all TinyMDE editors and textareas
-    for (const id in tinyMdeInstances) {
-      const instance = tinyMdeInstances[id];
-      const tinyMde = instance ? instance.editor || instance : null;
-      if (tinyMde && tinyMde.blur) {
-        tinyMde.blur();
-      }
-    }
-
-    // Also blur any focused textareas (fallback case)
-    const focusedTextareas = document.querySelectorAll(
-      '.sticky-note-content textarea:focus',
+    // Blur any focused contenteditable editors
+    const focusedEditors = document.querySelectorAll(
+      '.sticky-note-content .sticky-note-editor:focus',
     );
-    focusedTextareas.forEach((textarea) => {
-      /** @type {HTMLTextAreaElement} */ (textarea).blur();
+    focusedEditors.forEach((editor) => {
+      /** @type {HTMLElement} */ (editor).blur();
     });
 
     // Clear actively editing flags for all notes

@@ -65,6 +65,7 @@
 /* In minimized state, change layout to space-between */
 .sticky-note.minimized .sticky-note-header {
   justify-content: space-between;
+  border-radius: 10px;
 }
 
 .sticky-note-header-button {
@@ -203,27 +204,8 @@
   cursor: text;
 }
 
-/* TinyMDE editor styles within sticky notes */
-.sticky-note-content .TinyMDE {
-  width: 100%;
-  height: 100%;
-  background: transparent;
-  border: none;
-  outline: none;
-  font-size: 12px;
-  line-height: 1.4;
-  padding: 0;
-  margin: 0;
-  resize: none;
-}
-
-.sticky-note-content .TinyMDE.focus-visible {
-  box-shadow: none !important;
-  outline: none !important;
-}
-
-/* Fallback textarea styles */
-.sticky-note-content textarea {
+/* Plain text contenteditable editor */
+.sticky-note-content .sticky-note-editor {
   width: 100%;
   height: 100%;
   background: transparent;
@@ -235,6 +217,7 @@
   margin: 0;
   resize: none;
   font-family: inherit;
+  white-space: pre-wrap;
 }
 
 .sticky-note-content:focus {
@@ -308,12 +291,8 @@
     background-color: rgba(0, 0, 0, 0.1);
   }
 
-  /* Dark mode styles for TinyMDE and textarea */
-  .sticky-note-content .TinyMDE {
-    color: #eee;
-  }
-
-  .sticky-note-content textarea {
+  /* Dark mode styles for editor */
+  .sticky-note-content .sticky-note-editor {
     color: #eee;
   }
 
