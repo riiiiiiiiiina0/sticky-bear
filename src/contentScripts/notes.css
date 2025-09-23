@@ -81,6 +81,8 @@
   position: relative;
   display: inline-block;
   z-index: 1001;
+  width: 16px;
+  height: 16px;
 }
 
 .color-dropdown-button {
