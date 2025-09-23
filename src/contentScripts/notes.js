@@ -273,6 +273,14 @@
     // Start with empty content - only show when minimized
     headerText.innerText = '';
 
+    // If note starts minimized, initialize header text with content preview
+    if (note.minimized) {
+      const content = note.content || '';
+      const plainText = stripMarkdown(content);
+      headerText.innerText =
+        plainText.substring(0, 30) + (plainText.length > 30 ? '...' : '');
+    }
+
     // Create color dropdown
     const colorDropdown = createColorDropdown(
       id,
