@@ -375,6 +375,7 @@ const createNoteElement = (id, note) => {
 
       // Listen for paste events which might not trigger change events immediately
       editorElement.addEventListener('paste', (e) => {
+        e.stopPropagation(); // Prevent paste event from bubbling to the page
         setTimeout(handleContentChange, 100);
       });
     } else {
@@ -411,6 +412,11 @@ const createNoteElement = (id, note) => {
 
       textarea.addEventListener('keypress', (e) => {
         e.stopPropagation();
+      });
+
+      // Listen for paste events to prevent them from bubbling to the page
+      textarea.addEventListener('paste', (e) => {
+        e.stopPropagation(); // Prevent paste event from bubbling to the page
       });
 
       // Maintain focus when clicking inside the content area
