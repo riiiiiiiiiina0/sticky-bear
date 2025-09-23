@@ -1125,5 +1125,29 @@
     }
   });
 
+  // Mouse edge detection for toggling sticky notes collapse
+  let isNearLeftEdge = false; // Track if mouse is currently near left edge
+
+  const handleMouseMove = (e) => {
+    const mouseX = e.clientX;
+    const isCurrentlyNearEdge = mouseX < 20; // Within 20px of left edge
+
+    // Only toggle when mouse enters the edge zone (not when leaving)
+    if (isCurrentlyNearEdge && !isNearLeftEdge) {
+      isNearLeftEdge = true;
+
+      if (stickyNotesContainer) {
+        // Toggle the collapsed class each time mouse enters edge zone
+        stickyNotesContainer.classList.toggle('collapsed');
+      }
+    } else if (!isCurrentlyNearEdge && isNearLeftEdge) {
+      // Update state when mouse leaves edge zone
+      isNearLeftEdge = false;
+    }
+  };
+
+  // Add mouse move listener to document
+  document.addEventListener('mousemove', handleMouseMove);
+
   loadNotes();
 })();
