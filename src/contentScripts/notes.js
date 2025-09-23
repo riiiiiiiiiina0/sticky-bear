@@ -318,12 +318,6 @@
         console.log(`TinyMDE editor element:`, tinyMde.e);
         console.log(`TinyMDE focus method:`, typeof tinyMde.focus);
 
-        // Initialize the instance object
-        tinyMdeInstances[id] = {
-          editor: tinyMde,
-          syncInterval: null,
-        };
-
         // Function to handle content changes
         const handleContentChange = () => {
           const content = tinyMde.getContent();
@@ -335,6 +329,13 @@
           setTimeout(() => {
             isActivelyEditing[id] = false;
           }, 1000);
+        };
+
+        // Initialize the instance object
+        tinyMdeInstances[id] = {
+          editor: tinyMde,
+          syncInterval: null,
+          ready: false, // Track if event listeners are fully set up
         };
 
         // Listen for multiple types of content changes
@@ -354,6 +355,13 @@
 
         // Store the interval ID for cleanup
         tinyMdeInstances[id].syncInterval = syncInterval;
+
+        // Mark the TinyMDE instance as ready after all event listeners are set up
+        setTimeout(() => {
+          if (tinyMdeInstances[id]) {
+            tinyMdeInstances[id].ready = true;
+          }
+        }, 10);
 
         // Get the editor element for event handling
         const editorElement = tinyMde.e || textarea;
@@ -471,11 +479,17 @@
     makeResizable(noteElement, resizeHandle);
 
     // Ensure the note is ready for focusing
-    // Small delay to allow TinyMDE or textarea to be fully initialized
+    // Longer delay to allow TinyMDE or textarea to be fully initialized with all event listeners
     setTimeout(() => {
       // Mark this note as ready for focus
       noteElement.setAttribute('data-ready', 'true');
-    }, 10);
+
+      // If this note has a pending auto-focus, execute it now
+      if (noteElement.hasAttribute('data-pending-focus')) {
+        noteElement.removeAttribute('data-pending-focus');
+        setTimeout(() => focusNote(id), 10);
+      }
+    }, 100);
   };
 
   const bringToFront = (id) => {
@@ -726,12 +740,59 @@
     chrome.storage.local.set({ notes });
   };
 
+  // Function to get the currently focused note ID
+  const getFocusedNoteId = () => {
+    // Check which note has focus in TinyMDE editors
+    for (const id in tinyMdeInstances) {
+      const instance = tinyMdeInstances[id];
+      const tinyMde = instance ? instance.editor || instance : null;
+      if (tinyMde && tinyMde.e && document.activeElement === tinyMde.e) {
+        return id;
+      }
+    }
+
+    // Check for focused textareas (fallback)
+    const focusedTextarea = document.querySelector(
+      '.sticky-note-content textarea:focus',
+    );
+    if (focusedTextarea) {
+      const noteElement = focusedTextarea.closest('.sticky-note');
+      if (noteElement) {
+        return noteElement.getAttribute('data-id');
+      }
+    }
+
+    // Check for any focused content div
+    const focusedContent = document.querySelector('.sticky-note-content:focus');
+    if (focusedContent) {
+      const noteElement = focusedContent.closest('.sticky-note');
+      if (noteElement) {
+        return noteElement.getAttribute('data-id');
+      }
+    }
+
+    return null;
+  };
+
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'focus_note') {
       console.log(`Received focus_note message for note: ${message.id}`);
 
       const attemptMessageFocus = (attempt = 1) => {
         console.log(`Message focus attempt ${attempt} for note ${message.id}`);
+
+        const noteElement = document.querySelector(
+          `.sticky-note[data-id='${message.id}']`,
+        );
+
+        // Check if note is ready for focus
+        if (noteElement && !noteElement.hasAttribute('data-ready')) {
+          console.log(
+            `Note ${message.id} not ready yet, marking for pending focus`,
+          );
+          noteElement.setAttribute('data-pending-focus', 'true');
+          return;
+        }
 
         if (focusNote(message.id)) {
           console.log(
@@ -756,6 +817,14 @@
 
       // Start focus attempts immediately
       attemptMessageFocus();
+    } else if (message.action === 'delete_focused_note') {
+      const focusedNoteId = getFocusedNoteId();
+      if (focusedNoteId) {
+        deleteNote(focusedNoteId);
+        sendResponse({ success: true, deletedNoteId: focusedNoteId });
+      } else {
+        sendResponse({ success: false, error: 'No note is currently focused' });
+      }
     }
   });
 
@@ -805,35 +874,33 @@
           initializeStickyNotesContainer();
           createNoteElement(id, noteData);
 
-          // Auto-focus newly created notes with multiple attempts
-          console.log(`Auto-focusing new note: ${id}`);
+          // Auto-focus newly created notes - wait for the note to be ready
 
-          const attemptAutoFocus = (attempt = 1) => {
-            console.log(`Auto-focus attempt ${attempt} for note ${id}`);
-
-            if (focusNote(id)) {
-              console.log(
-                `Auto-focus successful on attempt ${attempt} for note ${id}`,
+          // Check if the note element is ready for focus
+          const noteElement = document.querySelector(
+            `.sticky-note[data-id='${id}']`,
+          );
+          if (noteElement && noteElement.hasAttribute('data-ready')) {
+            // Note is ready, focus immediately
+            setTimeout(() => focusNote(id), 10);
+          } else if (noteElement) {
+            // Note is not ready yet, mark it for pending focus
+            noteElement.setAttribute('data-pending-focus', 'true');
+          } else {
+            // Note element doesn't exist yet, retry
+            setTimeout(() => {
+              const retryNoteElement = document.querySelector(
+                `.sticky-note[data-id='${id}']`,
               );
-              return;
-            }
-
-            // Retry with increasing delays if focus failed
-            if (attempt < 5) {
-              const delay = attempt * 100; // 100ms, 200ms, 300ms, 400ms
-              console.log(
-                `Auto-focus failed, retrying in ${delay}ms for note ${id}`,
-              );
-              setTimeout(() => attemptAutoFocus(attempt + 1), delay);
-            } else {
-              console.log(
-                `Auto-focus failed after ${attempt} attempts for note ${id}`,
-              );
-            }
-          };
-
-          // Start auto-focus attempts after a small initial delay
-          setTimeout(() => attemptAutoFocus(), 50);
+              if (retryNoteElement) {
+                if (retryNoteElement.hasAttribute('data-ready')) {
+                  setTimeout(() => focusNote(id), 10);
+                } else {
+                  retryNoteElement.setAttribute('data-pending-focus', 'true');
+                }
+              }
+            }, 50);
+          }
         } else {
           // Note was updated, update position and z-index only if not currently dragging
           if (!isDragging) {
@@ -989,8 +1056,25 @@
     const tinyMde = instance ? instance.editor || instance : null;
     const noteElement = document.querySelector(`.sticky-note[data-id='${id}']`);
 
+    if (document.visibilityState !== 'visible') {
+      console.log(`Document is not visible, skipping focus for note ${id}`);
+      return false;
+    }
+
     if (!noteElement) {
       console.log(`Note element not found for id: ${id}`);
+      return false;
+    }
+
+    // Check if the note is ready for focus
+    if (!noteElement.hasAttribute('data-ready')) {
+      console.log(`Note ${id} not ready for focus yet`);
+      return false;
+    }
+
+    // Check if TinyMDE instance is ready (if it exists)
+    if (instance && !instance.ready) {
+      console.log(`TinyMDE instance for note ${id} not ready yet`);
       return false;
     }
 

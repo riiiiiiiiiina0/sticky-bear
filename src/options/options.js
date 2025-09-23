@@ -8,6 +8,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const importFile = /** @type {HTMLInputElement} */ (
     document.getElementById('import-file')
   );
+  const deleteAllButton = /** @type {HTMLButtonElement} */ (
+    document.getElementById('delete-all-button')
+  );
 
   // Export functionality
   if (exportButton) {
@@ -105,6 +108,42 @@ document.addEventListener('DOMContentLoaded', () => {
       };
 
       reader.readAsText(file);
+    });
+  }
+
+  // Delete all notes functionality
+  if (deleteAllButton) {
+    deleteAllButton.addEventListener('click', () => {
+      // First check if there are any notes to delete
+      chrome.storage.local.get('notes', (data) => {
+        if (chrome.runtime.lastError) {
+          alert('Error checking notes: ' + chrome.runtime.lastError.message);
+          return;
+        }
+
+        const notes = data.notes || {};
+        if (Object.keys(notes).length === 0) {
+          alert('There are no notes to delete.');
+          return;
+        }
+
+        // Show confirmation dialog
+        const noteCount = Object.keys(notes).length;
+        const confirmMessage = `Are you sure you want to delete all ${noteCount} sticky note(s)? This action cannot be undone.`;
+
+        if (confirm(confirmMessage)) {
+          // Clear all notes from storage
+          chrome.storage.local.set({ notes: {} }, () => {
+            if (chrome.runtime.lastError) {
+              alert(
+                'Error deleting notes: ' + chrome.runtime.lastError.message,
+              );
+            } else {
+              alert('All sticky notes have been deleted successfully!');
+            }
+          });
+        }
+      });
     });
   }
 });

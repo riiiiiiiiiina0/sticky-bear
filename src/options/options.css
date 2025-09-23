@@ -96,3 +96,12 @@ input[type='file']::file-selector-button {
 input[type='file']::file-selector-button:hover {
   background-color: #e2e6ea;
 }
+
+/* Danger button styling */
+.danger-button {
+  background-color: #dc3545;
+}
+
+.danger-button:hover {
+  background-color: #c82333;
+}

@@ -37,5 +37,21 @@
   "options_ui": {
     "page": "src/options/options.html",
     "open_in_tab": true
+  },
+  "commands": {
+    "create-new-note": {
+      "suggested_key": {
+        "default": "Alt+N",
+        "mac": "Alt+N"
+      },
+      "description": "Create a new sticky note"
+    },
+    "delete-focused-note": {
+      "suggested_key": {
+        "default": "Alt+W",
+        "mac": "Alt+W"
+      },
+      "description": "Delete the currently focused sticky note"
+    }
   }
 }
