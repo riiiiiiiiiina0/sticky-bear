@@ -505,6 +505,14 @@
     );
   };
 
+  // Function to collapse multiple consecutive newlines into single newlines
+  const collapseMultipleNewlines = (text) => {
+    if (!text) return '';
+
+    // Replace multiple consecutive newlines (3 or more) with two newlines
+    return text.replace(/\n{3,}/g, '\n\n');
+  };
+
   let notes = {};
   const debouncedSaveNotes = debounce(() => saveNotes(), 300);
   let stickyNotesContainer = null;
@@ -982,6 +990,15 @@
 
     // Helper to render markdown and show rendered view
     const showRendered = () => {
+      // Collapse multiple newlines when leaving edit mode
+      const currentContent = editor.textContent || '';
+      const collapsedContent = collapseMultipleNewlines(currentContent);
+      if (collapsedContent !== currentContent) {
+        editor.textContent = collapsedContent;
+        // Update the note content in storage
+        updateNoteContent(id, collapsedContent);
+      }
+
       try {
         const md = notes[id]?.content ?? editor.innerText ?? '';
         // Use bundled marked library if present on globalThis
@@ -999,6 +1016,15 @@
 
     // Helper to show plain editor
     const showEditor = () => {
+      // Collapse multiple newlines when entering edit mode
+      const currentContent = editor.textContent || '';
+      const collapsedContent = collapseMultipleNewlines(currentContent);
+      if (collapsedContent !== currentContent) {
+        editor.textContent = collapsedContent;
+        // Update the note content in storage
+        updateNoteContent(id, collapsedContent);
+      }
+
       rendered.style.display = 'none';
       editor.style.display = 'block';
     };
