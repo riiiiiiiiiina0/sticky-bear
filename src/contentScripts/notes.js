@@ -332,6 +332,14 @@
   display: none;
 }
 
+.sticky-note.minimized .color-dropdown {
+  display: none;
+}
+
+.sticky-note.minimized .expand-note {
+  display: none;
+}
+
 .sticky-note.minimized .header-text {
   font-weight: bold;
 }
@@ -503,6 +511,26 @@
         .replace(/\s+/g, ' ')
         .trim()
     );
+  };
+
+  // Function to get the first line of content for header display
+  const getFirstLineForHeader = (content) => {
+    if (!content) return '';
+
+    // Split by newlines and get the first non-empty line
+    const lines = content.split('\n');
+    const firstLine = lines.find((line) => line.trim() !== '') || '';
+
+    const plainText = stripMarkdown(firstLine);
+    if (!plainText) return '';
+
+    // Trim and limit length if needed (keep reasonable length for header)
+    const trimmedLine = plainText.trim();
+    const maxLength = 50; // Slightly longer than before since it's just one line
+
+    return trimmedLine.length > maxLength
+      ? trimmedLine.substring(0, maxLength) + '...'
+      : trimmedLine;
   };
 
   // Function to collapse multiple consecutive newlines into single newlines
@@ -997,9 +1025,7 @@
     // If note starts minimized, initialize header text with content preview
     if (note.minimized) {
       const content = note.content || '';
-      const plainText = stripMarkdown(content);
-      headerText.innerText =
-        plainText.substring(0, 30) + (plainText.length > 30 ? '...' : '');
+      headerText.innerText = getFirstLineForHeader(content);
     }
 
     // Create color dropdown
@@ -1454,14 +1480,12 @@
       noteElement.classList.add('minimized');
       notes[id].minimized = true;
 
-      // Update header text with current content (plain text)
+      // Update header text with current content (first line only)
       const headerText = /** @type {HTMLSpanElement} */ (
         noteElement.querySelector('.header-text')
       );
       const content = notes[id].content || '';
-      const plainText = stripMarkdown(content);
-      headerText.innerText =
-        plainText.substring(0, 30) + (plainText.length > 30 ? '...' : '');
+      headerText.innerText = getFirstLineForHeader(content);
     }
 
     debouncedSaveNotes();
@@ -1472,7 +1496,7 @@
       notes[id].content = content;
       notes[id].lastEditTimestamp = lastEditTimestamp[id] || Date.now();
 
-      // Update header text if note is minimized (use plain text)
+      // Update header text if note is minimized (first line only)
       const noteElement = shadowRoot.querySelector(
         `.sticky-note[data-id='${id}']`,
       );
@@ -1481,9 +1505,7 @@
           noteElement.querySelector('.header-text')
         );
         if (headerText) {
-          const plainText = stripMarkdown(content);
-          headerText.innerText =
-            plainText.substring(0, 30) + (plainText.length > 30 ? '...' : '');
+          headerText.innerText = getFirstLineForHeader(content);
         }
       }
 
@@ -1731,16 +1753,13 @@
             if (noteData.minimized) {
               if (!noteElement.classList.contains('minimized')) {
                 noteElement.classList.add('minimized');
-                // Update header text (use plain text)
+                // Update header text (first line only)
                 const headerText = /** @type {HTMLSpanElement} */ (
                   noteElement.querySelector('.header-text')
                 );
                 if (headerText) {
                   const content = noteData.content || '';
-                  const plainText = stripMarkdown(content);
-                  headerText.innerText =
-                    plainText.substring(0, 30) +
-                    (plainText.length > 30 ? '...' : '');
+                  headerText.innerText = getFirstLineForHeader(content);
                 }
               }
             } else {
