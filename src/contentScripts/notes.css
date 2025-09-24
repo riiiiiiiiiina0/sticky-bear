@@ -1,4 +1,134 @@
+/*
+  CSS Reset
+  http://meyerweb.com/eric/tools/css/reset/
+  v2.0 | 20110126
+  License: none (public domain)
+*/
+.sticky-notes-container div,
+.sticky-notes-container span,
+.sticky-notes-container applet,
+.sticky-notes-container object,
+.sticky-notes-container iframe,
+.sticky-notes-container h1,
+.sticky-notes-container h2,
+.sticky-notes-container h3,
+.sticky-notes-container h4,
+.sticky-notes-container h5,
+.sticky-notes-container h6,
+.sticky-notes-container p,
+.sticky-notes-container blockquote,
+.sticky-notes-container pre,
+.sticky-notes-container a,
+.sticky-notes-container abbr,
+.sticky-notes-container acronym,
+.sticky-notes-container address,
+.sticky-notes-container big,
+.sticky-notes-container cite,
+.sticky-notes-container code,
+.sticky-notes-container del,
+.sticky-notes-container dfn,
+.sticky-notes-container em,
+.sticky-notes-container img,
+.sticky-notes-container ins,
+.sticky-notes-container kbd,
+.sticky-notes-container q,
+.sticky-notes-container s,
+.sticky-notes-container samp,
+.sticky-notes-container small,
+.sticky-notes-container strike,
+.sticky-notes-container strong,
+.sticky-notes-container sub,
+.sticky-notes-container sup,
+.sticky-notes-container tt,
+.sticky-notes-container var,
+.sticky-notes-container b,
+.sticky-notes-container u,
+.sticky-notes-container i,
+.sticky-notes-container center,
+.sticky-notes-container dl,
+.sticky-notes-container dt,
+.sticky-notes-container dd,
+.sticky-notes-container ol,
+.sticky-notes-container ul,
+.sticky-notes-container li,
+.sticky-notes-container fieldset,
+.sticky-notes-container form,
+.sticky-notes-container label,
+.sticky-notes-container legend,
+.sticky-notes-container table,
+.sticky-notes-container caption,
+.sticky-notes-container tbody,
+.sticky-notes-container tfoot,
+.sticky-notes-container thead,
+.sticky-notes-container tr,
+.sticky-notes-container th,
+.sticky-notes-container td,
+.sticky-notes-container article,
+.sticky-notes-container aside,
+.sticky-notes-container canvas,
+.sticky-notes-container details,
+.sticky-notes-container embed,
+.sticky-notes-container figure,
+.sticky-notes-container figcaption,
+.sticky-notes-container footer,
+.sticky-notes-container header,
+.sticky-notes-container hgroup,
+.sticky-notes-container menu,
+.sticky-notes-container nav,
+.sticky-notes-container output,
+.sticky-notes-container ruby,
+.sticky-notes-container section,
+.sticky-notes-container summary,
+.sticky-notes-container time,
+.sticky-notes-container mark,
+.sticky-notes-container audio,
+.sticky-notes-container video {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 100%;
+  font: inherit;
+  vertical-align: baseline;
+}
+/* HTML5 display-role reset for older browsers */
+.sticky-notes-container article,
+.sticky-notes-container aside,
+.sticky-notes-container details,
+.sticky-notes-container figcaption,
+.sticky-notes-container figure,
+.sticky-notes-container footer,
+.sticky-notes-container header,
+.sticky-notes-container hgroup,
+.sticky-notes-container menu,
+.sticky-notes-container nav,
+.sticky-notes-container section {
+  display: block;
+}
+.sticky-notes-container ol,
+.sticky-notes-container ul {
+  list-style: none;
+}
+.sticky-notes-container blockquote,
+.sticky-notes-container q {
+  quotes: none;
+}
+.sticky-notes-container blockquote:before,
+.sticky-notes-container blockquote:after,
+.sticky-notes-container q:before,
+.sticky-notes-container q:after {
+  content: '';
+  content: none;
+}
+.sticky-notes-container table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+.sticky-notes-container * {
+  all: revert;
+}
+
 .sticky-notes-container {
+  all: initial;
   position: fixed;
   top: 0;
   left: 0;
