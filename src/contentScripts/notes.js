@@ -610,6 +610,9 @@
       }
     });
 
+    // Constrain all notes to new viewport boundaries
+    constrainNotesToViewport();
+
     if (hasChanges) {
       debouncedSaveNotes();
     }
@@ -635,6 +638,7 @@
       updateNotesOnResize();
     }, 300),
   );
+
   // Initial report
   reportDpr();
 
@@ -642,8 +646,16 @@
   const applyContainerScale = () => {
     if (!stickyNotesContainer) return;
     const scale = unifiedDpr / window.devicePixelRatio;
+    console.log(
+      'Applying container scale',
+      scale,
+      unifiedDpr,
+      window.devicePixelRatio,
+    );
     stickyNotesContainer.style.transformOrigin = '0 0';
     stickyNotesContainer.style.transform = `scale(${scale})`;
+    stickyNotesContainer.style.width = `${100 / scale}%`;
+    stickyNotesContainer.style.height = `${100 / scale}%`;
   };
 
   // Listen for DPR updates from background script
@@ -663,7 +675,7 @@
       shadowHost = document.createElement('div');
       shadowHost.classList.add('sunny-bear-excluded');
       shadowHost.style.cssText =
-        'position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2147483647;';
+        'position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2147483647; overflow: hidden;';
 
       // Create Shadow DOM
       shadowRoot = shadowHost.attachShadow({ mode: 'closed' });
@@ -688,6 +700,57 @@
       applyContainerScale();
 
       console.log('Sticky notes container initialized successfully');
+    }
+  };
+
+  // Function to constrain note positions within viewport boundaries
+  const constrainNotesToViewport = () => {
+    let hasChanges = false;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    for (const id in notes) {
+      const note = notes[id];
+      const noteWidth = parseInt(note.width) || 200;
+      const noteHeight = parseInt(note.height) || 200;
+
+      // Constrain top position
+      const topValue = parseInt(note.top) || 0;
+      const constrainedTop = Math.max(
+        0,
+        Math.min(topValue, viewportHeight - noteHeight),
+      );
+      if (constrainedTop !== topValue) {
+        note.top = constrainedTop + 'px';
+        hasChanges = true;
+      }
+
+      // Constrain horizontal position based on edge alignment
+      if (note.edge === 'right' && note.right) {
+        const rightValue = parseInt(note.right) || 0;
+        const constrainedRight = Math.max(
+          0,
+          Math.min(rightValue, viewportWidth - noteWidth),
+        );
+        if (constrainedRight !== rightValue) {
+          note.right = constrainedRight + 'px';
+          hasChanges = true;
+        }
+      } else if (note.left) {
+        const leftValue = parseInt(note.left) || 0;
+        const constrainedLeft = Math.max(
+          0,
+          Math.min(leftValue, viewportWidth - noteWidth),
+        );
+        if (constrainedLeft !== leftValue) {
+          note.left = constrainedLeft + 'px';
+          hasChanges = true;
+        }
+      }
+    }
+
+    if (hasChanges) {
+      saveNotes();
     }
   };
 
@@ -743,6 +806,7 @@
         if (data.notes) {
           notes = data.notes;
           migrateNotesToEdgePositioning();
+          constrainNotesToViewport();
           renderNotes();
           console.log('Loaded', Object.keys(notes).length, 'sticky notes');
         } else {
@@ -1218,8 +1282,32 @@
       pos2 = pos4 - e.clientY;
       pos3 = e.clientX;
       pos4 = e.clientY;
-      element.style.top = element.offsetTop - pos2 + 'px';
-      element.style.left = element.offsetLeft - pos1 + 'px';
+
+      // Calculate new position
+      const newTop = element.offsetTop - pos2;
+      const newLeft = element.offsetLeft - pos1;
+
+      // Get viewport dimensions
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
+      // Get element dimensions
+      const elementRect = element.getBoundingClientRect();
+      const elementWidth = elementRect.width;
+      const elementHeight = elementRect.height;
+
+      // Apply viewport boundary constraints
+      const constrainedTop = Math.max(
+        0,
+        Math.min(newTop, viewportHeight - elementHeight),
+      );
+      const constrainedLeft = Math.max(
+        0,
+        Math.min(newLeft, viewportWidth - elementWidth),
+      );
+
+      element.style.top = constrainedTop + 'px';
+      element.style.left = constrainedLeft + 'px';
     }
 
     function closeDragElement() {
@@ -1271,11 +1359,31 @@
       const minWidth = 150;
       const minHeight = 100;
 
-      if (newWidth >= minWidth) {
-        element.style.width = newWidth + 'px';
+      // Get viewport dimensions
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
+      // Get current element position
+      const elementRect = element.getBoundingClientRect();
+      const elementLeft = elementRect.left;
+      const elementTop = elementRect.top;
+
+      // Calculate maximum allowed dimensions based on viewport boundaries
+      const maxWidth = viewportWidth - elementLeft;
+      const maxHeight = viewportHeight - elementTop;
+
+      // Apply constraints: minimum dimensions and viewport boundaries
+      const constrainedWidth = Math.max(minWidth, Math.min(newWidth, maxWidth));
+      const constrainedHeight = Math.max(
+        minHeight,
+        Math.min(newHeight, maxHeight),
+      );
+
+      if (constrainedWidth >= minWidth) {
+        element.style.width = constrainedWidth + 'px';
       }
-      if (newHeight >= minHeight) {
-        element.style.height = newHeight + 'px';
+      if (constrainedHeight >= minHeight) {
+        element.style.height = constrainedHeight + 'px';
       }
     }
 
@@ -1911,6 +2019,11 @@
   let isNearRightEdge = false; // Track if mouse is currently near right edge
 
   const handleMouseMove = (e) => {
+    // Don't trigger collapsing during dragging or resizing
+    if (isDragging) {
+      return;
+    }
+
     const mouseX = e.clientX;
     const viewportWidth = window.innerWidth;
 

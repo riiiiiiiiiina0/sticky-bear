@@ -295,6 +295,7 @@ chrome.runtime.onInstalled.addListener((details) => {
 
 // Device pixel ratio management
 let maxDevicePixelRatio = 1;
+const DEVICE_PIXEL_RATIO_MAX = 2;
 
 // Listen for DPR reports from content scripts
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -303,7 +304,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     typeof message.dpr === 'number'
   ) {
     const newDpr = message.dpr;
-    if (newDpr > maxDevicePixelRatio) {
+    if (newDpr > maxDevicePixelRatio && newDpr <= DEVICE_PIXEL_RATIO_MAX) {
       maxDevicePixelRatio = newDpr;
       // Broadcast the updated DPR to all tabs
       chrome.tabs.query({}, (tabs) => {
