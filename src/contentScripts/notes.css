@@ -261,7 +261,7 @@
 .sticky-note-content .sticky-note-rendered ul,
 .sticky-note-content .sticky-note-rendered ol {
   margin: 0.2em 0 0.2em 1.2em;
-  padding: 0;
+  padding: revert;
 }
 .sticky-note-content .sticky-note-rendered code,
 .sticky-note-content .sticky-note-rendered pre {
