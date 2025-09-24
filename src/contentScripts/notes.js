@@ -1,5 +1,437 @@
 /* global BundledCode */
 (() => {
+  // CSS content to be injected into Shadow DOM
+  const CSS_CONTENT = `.sticky-notes-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
+    Arial, sans-serif;
+  font-size: 12px;
+  z-index: 2147483647; /* Highest possible z-index */
+}
+
+.sticky-notes-container.collapsed .sticky-note {
+  left: 0 !important;
+  transform: translateX(calc(-100% + 15px));
+}
+.sticky-notes-container.collapsing .sticky-note {
+  transition: all 0.3s ease-in-out;
+}
+
+.sticky-note {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  color: #000;
+  background-color: rgba(255, 255, 204, 0.85);
+  backdrop-filter: blur(4px);
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+  min-width: 150px;
+  min-height: 100px;
+}
+
+.sticky-note-header {
+  height: 20px;
+  background-color: #f0f0f0;
+  cursor: move;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px;
+  position: relative;
+  z-index: 1000;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+}
+
+.header-text {
+  flex-grow: 1;
+  font-size: 11px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0 4px;
+  line-height: 20px;
+}
+
+/* In minimized state, change layout to space-between */
+.sticky-note.minimized .sticky-note-header {
+  justify-content: space-between;
+  border-radius: 10px;
+}
+
+.sticky-note-header-button {
+  font-size: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  line-height: 1;
+  margin: 0;
+  padding: 0;
+  border-radius: 3px;
+  transition: background 0.2s;
+}
+.sticky-note-header-button:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.sticky-note-header-button svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+}
+
+.color-dropdown {
+  position: relative;
+  display: inline-block;
+  z-index: 1001;
+  width: 14px;
+  height: 14px;
+}
+
+.color-dropdown-button {
+  background: none;
+  border: 1px solid #999;
+  font-size: 12px;
+  cursor: pointer;
+  line-height: 1;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  margin: 0;
+  padding: 0;
+}
+
+.color-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 2147483647;
+  display: none;
+  padding: 4px;
+}
+
+.color-dropdown-menu::after {
+  content: '';
+  display: table;
+  clear: both;
+}
+
+.color-dropdown-menu.show {
+  display: block;
+}
+
+.color-option {
+  display: block;
+  width: 20px;
+  height: 20px;
+  margin: 2px;
+  border: 1px solid #999;
+  border-radius: 3px;
+  cursor: pointer;
+  float: left;
+}
+
+.color-option:hover {
+  border-color: #333;
+  transform: scale(1.1);
+}
+
+.color-option.selected {
+  border: 2px solid #333;
+  border-width: 2px;
+}
+
+/* Background color variants */
+.sticky-note.color-yellow {
+  background-color: rgba(255, 255, 204, 0.85);
+}
+
+.sticky-note.color-yellow .sticky-note-header {
+  background-color: rgba(240, 240, 180, 0.95);
+}
+
+.sticky-note.color-green {
+  background-color: rgba(144, 238, 144, 0.85);
+}
+
+.sticky-note.color-green .sticky-note-header {
+  background-color: rgba(120, 200, 120, 0.95);
+}
+
+.sticky-note.color-blue {
+  background-color: rgba(204, 229, 255, 0.85);
+}
+
+.sticky-note.color-blue .sticky-note-header {
+  background-color: rgba(180, 210, 240, 0.95);
+}
+
+.sticky-note.color-red {
+  background-color: rgba(255, 204, 204, 0.85);
+}
+
+.sticky-note.color-red .sticky-note-header {
+  background-color: rgba(240, 180, 180, 0.95);
+}
+
+.sticky-note.color-gray {
+  background-color: rgba(230, 230, 230, 0.85);
+}
+
+.sticky-note.color-gray .sticky-note-header {
+  background-color: rgba(200, 200, 200, 0.95);
+}
+
+.sticky-note-content {
+  flex-grow: 1;
+  padding: 6px 10px;
+  outline: none;
+  overflow: auto;
+  line-height: 1.4;
+  cursor: text;
+}
+
+/* Plain text contenteditable editor */
+.sticky-note-content .sticky-note-editor {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 0;
+  margin: 0;
+  resize: none;
+  font-family: inherit;
+  white-space: pre-wrap;
+}
+
+/* Rendered markdown view */
+.sticky-note-content .sticky-note-rendered {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.4;
+  color: inherit;
+}
+.sticky-note-content .sticky-note-rendered h1 {
+  margin: 0.3em 0 0.2em;
+  font-weight: 700;
+  font-size: 1.5em;
+}
+.sticky-note-content .sticky-note-rendered h2 {
+  margin: 0.3em 0 0.2em;
+  font-weight: 600;
+  font-size: 1.3em;
+}
+.sticky-note-content .sticky-note-rendered h3 {
+  margin: 0.3em 0 0.2em;
+  font-weight: 600;
+  font-size: 1.15em;
+}
+.sticky-note-content .sticky-note-rendered h4,
+.sticky-note-content .sticky-note-rendered h5,
+.sticky-note-content .sticky-note-rendered h6 {
+  margin: 0.3em 0 0.2em;
+  font-weight: 600;
+  font-size: 1em;
+}
+.sticky-note-content .sticky-note-rendered p {
+  margin: 0.2em 0;
+}
+.sticky-note-content .sticky-note-rendered img {
+  max-width: 100%;
+  border-radius: 8px;
+}
+.sticky-note-content .sticky-note-rendered ul,
+.sticky-note-content .sticky-note-rendered ol {
+  margin: 0.2em 0 0.2em 1.2em;
+  padding: 0;
+}
+.sticky-note-content .sticky-note-rendered code,
+.sticky-note-content .sticky-note-rendered pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    'Liberation Mono', 'Courier New', monospace;
+  font-size: 11px;
+}
+.sticky-note-content .sticky-note-rendered pre {
+  padding: 6px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+  overflow: auto;
+}
+
+.sticky-note-content:focus {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.resize-handle {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 15px;
+  height: 15px;
+  cursor: nw-resize;
+  background: transparent;
+}
+
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-bottom: 8px solid #999;
+}
+
+/* Minimized state styles */
+.sticky-note.minimized {
+  height: 20px !important;
+  min-height: 20px;
+}
+
+.sticky-note.minimized .sticky-note-content {
+  display: none;
+}
+
+.sticky-note.minimized .resize-handle {
+  display: none;
+}
+
+.sticky-note.minimized .header-text {
+  font-weight: bold;
+}
+
+/* Dark Mode Styles */
+@media (prefers-color-scheme: dark) {
+  .sticky-note {
+    background-color: rgba(42, 42, 42, 0.85);
+    backdrop-filter: blur(4px);
+    color: #eee;
+  }
+
+  .sticky-note-header {
+    background-color: #333;
+  }
+
+  .delete-note {
+    color: #eee;
+  }
+
+  .resize-handle::after {
+    border-bottom-color: #666;
+  }
+
+  .header-text {
+    color: #ccc;
+  }
+
+  .sticky-note-content:focus {
+    background-color: rgba(0, 0, 0, 0.1);
+  }
+
+  /* Dark mode styles for editor */
+  .sticky-note-content .sticky-note-editor {
+    color: #eee;
+  }
+
+  /* Improve anchor readability in rendered markdown */
+  .sticky-note-content .sticky-note-rendered a {
+    color: #8ab4f8;
+    text-decoration: underline;
+  }
+  .sticky-note-content .sticky-note-rendered a:visited {
+    color: #c58af9;
+  }
+  .sticky-note-content .sticky-note-rendered a:hover {
+    text-decoration: underline;
+    filter: brightness(1.1);
+  }
+
+  /* Dark mode color dropdown styles */
+  .color-dropdown-button {
+    border-color: #666;
+  }
+
+  .color-dropdown-menu {
+    background: #333;
+    border-color: #555;
+  }
+
+  .color-option {
+    border-color: #666;
+  }
+
+  .color-option:hover {
+    border-color: #999;
+  }
+
+  .color-option.selected {
+    border-color: #ccc;
+  }
+
+  /* Dark mode background color variants */
+  .sticky-note.color-yellow {
+    background-color: rgba(80, 80, 40, 0.85);
+  }
+
+  .sticky-note.color-yellow .sticky-note-header {
+    background-color: rgba(100, 100, 50, 0.95);
+  }
+
+  .sticky-note.color-green {
+    background-color: rgba(34, 68, 34, 0.85);
+  }
+
+  .sticky-note.color-green .sticky-note-header {
+    background-color: rgba(44, 88, 44, 0.95);
+  }
+
+  .sticky-note.color-blue {
+    background-color: rgba(40, 60, 80, 0.85);
+  }
+
+  .sticky-note.color-blue .sticky-note-header {
+    background-color: rgba(50, 75, 100, 0.95);
+  }
+
+  .sticky-note.color-red {
+    background-color: rgba(80, 40, 40, 0.85);
+  }
+
+  .sticky-note.color-red .sticky-note-header {
+    background-color: rgba(100, 50, 50, 0.95);
+  }
+
+  .sticky-note.color-gray {
+    background-color: rgba(60, 60, 60, 0.85);
+  }
+
+  .sticky-note.color-gray .sticky-note-header {
+    background-color: rgba(80, 80, 80, 0.95);
+  }
+}`;
+
   const heroicons = {
     close: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
   <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -62,6 +494,8 @@
   let notes = {};
   const debouncedSaveNotes = debounce(() => saveNotes(), 300);
   let stickyNotesContainer = null;
+  let shadowRoot = null; // Shadow DOM root
+  let shadowHost = null; // Shadow DOM host element
   let isDragging = false;
   let lastEditTimestamp = {}; // Track last edit time for each note
   let isActivelyEditing = {}; // Track which notes are being actively edited
@@ -103,12 +537,31 @@
   // Ensure scale is applied once the container exists
   const initializeStickyNotesContainer = () => {
     if (!stickyNotesContainer) {
+      // Create Shadow DOM host element
+      shadowHost = document.createElement('div');
+      shadowHost.classList.add('sunny-bear-excluded');
+      shadowHost.style.cssText =
+        'position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2147483647;';
+
+      // Create Shadow DOM
+      shadowRoot = shadowHost.attachShadow({ mode: 'closed' });
+
+      // Inject CSS into Shadow DOM
+      const style = document.createElement('style');
+      style.textContent = CSS_CONTENT;
+      shadowRoot.appendChild(style);
+
+      // Create the sticky notes container inside Shadow DOM
       stickyNotesContainer = document.createElement('div');
       stickyNotesContainer.classList.add(
         'sticky-notes-container',
         'sunny-bear-excluded',
       );
-      document.body.appendChild(stickyNotesContainer);
+      shadowRoot.appendChild(stickyNotesContainer);
+
+      // Append shadow host to document body
+      document.body.appendChild(shadowHost);
+
       // Apply scaling based on unified DPR when container is first created
       applyContainerScale();
     }
@@ -126,7 +579,7 @@
 
   const renderNotes = () => {
     initializeStickyNotesContainer();
-    const existingNotes = document.querySelectorAll('.sticky-note');
+    const existingNotes = shadowRoot.querySelectorAll('.sticky-note');
     existingNotes.forEach((note) => note.remove());
 
     for (const id in notes) {
@@ -193,7 +646,7 @@
     notes[noteId].backgroundColor = newColor;
 
     // Update the note element classes
-    const noteElement = document.querySelector(
+    const noteElement = shadowRoot.querySelector(
       `.sticky-note[data-id='${noteId}']`,
     );
     if (noteElement) {
@@ -407,12 +860,18 @@
       }, 0);
     });
 
-    // When the note is showing rendered markdown, clicking anywhere on it
+    // When the note is showing rendered markdown, clicking on the content area
     // (except on anchors inside rendered view) switches back to editor
     noteElement.addEventListener('click', (e) => {
       const isRenderedVisible = rendered.style.display !== 'none';
       if (!isRenderedVisible) return;
       const t = /** @type {HTMLElement} */ (e.target);
+
+      // Don't focus editor if click is on the header
+      if (t && noteHeader.contains(t)) {
+        return;
+      }
+
       if (t && rendered.contains(t) && t.closest('a')) {
         // Anchor click handled separately
         return;
@@ -478,13 +937,12 @@
     }, 100);
 
     // Initial state: show rendered if editor is not focused
-    if (document.activeElement !== editor) {
-      showRendered();
-    }
+    // Note: document.activeElement won't work with shadow DOM, so we'll default to rendered view
+    showRendered();
   };
 
   const bringToFront = (id) => {
-    const noteElements = document.querySelectorAll('.sticky-note');
+    const noteElements = shadowRoot.querySelectorAll('.sticky-note');
     let maxZ = 0;
     noteElements.forEach((el) => {
       // zIndex can be 'auto', so we parse it and default to 0 if it's not a number.
@@ -500,7 +958,7 @@
     if (notes[id]) {
       notes[id].zIndex = newZIndex;
       const noteElement = /** @type {HTMLDivElement} */ (
-        document.querySelector(`.sticky-note[data-id='${id}']`)
+        shadowRoot.querySelector(`.sticky-note[data-id='${id}']`)
       );
       if (noteElement) {
         noteElement.style.zIndex = newZIndex.toString();
@@ -605,7 +1063,9 @@
   };
 
   const toggleMinimize = (id) => {
-    const noteElement = document.querySelector(`.sticky-note[data-id='${id}']`);
+    const noteElement = shadowRoot.querySelector(
+      `.sticky-note[data-id='${id}']`,
+    );
     if (!noteElement || !notes[id]) return;
 
     const isMinimized = noteElement.classList.contains('minimized');
@@ -646,7 +1106,7 @@
       notes[id].lastEditTimestamp = lastEditTimestamp[id] || Date.now();
 
       // Update header text if note is minimized (use plain text)
-      const noteElement = document.querySelector(
+      const noteElement = shadowRoot.querySelector(
         `.sticky-note[data-id='${id}']`,
       );
       if (noteElement && noteElement.classList.contains('minimized')) {
@@ -665,7 +1125,9 @@
   };
 
   const expandNoteToContent = (id) => {
-    const noteElement = document.querySelector(`.sticky-note[data-id='${id}']`);
+    const noteElement = shadowRoot.querySelector(
+      `.sticky-note[data-id='${id}']`,
+    );
     if (!noteElement || !notes[id]) return;
 
     // Get the content area
@@ -706,7 +1168,9 @@
     delete lastEditTimestamp[id];
     delete isActivelyEditing[id];
     saveNotes();
-    const noteElement = document.querySelector(`.sticky-note[data-id='${id}']`);
+    const noteElement = shadowRoot.querySelector(
+      `.sticky-note[data-id='${id}']`,
+    );
     if (noteElement) {
       noteElement.remove();
     }
@@ -719,7 +1183,7 @@
   // Function to get the currently focused note ID
   const getFocusedNoteId = () => {
     // Check for focused contenteditable editor
-    const focusedEditor = document.querySelector(
+    const focusedEditor = shadowRoot.querySelector(
       '.sticky-note-content .sticky-note-editor:focus',
     );
     if (focusedEditor) {
@@ -730,7 +1194,9 @@
     }
 
     // Check for any focused content container
-    const focusedContent = document.querySelector('.sticky-note-content:focus');
+    const focusedContent = shadowRoot.querySelector(
+      '.sticky-note-content:focus',
+    );
     if (focusedContent) {
       const noteElement = focusedContent.closest('.sticky-note');
       if (noteElement) {
@@ -748,7 +1214,7 @@
       const attemptMessageFocus = (attempt = 1) => {
         console.log(`Message focus attempt ${attempt} for note ${message.id}`);
 
-        const noteElement = document.querySelector(
+        const noteElement = shadowRoot.querySelector(
           `.sticky-note[data-id='${message.id}']`,
         );
 
@@ -808,7 +1274,7 @@
           delete lastEditTimestamp[id];
           delete isActivelyEditing[id];
 
-          const noteElement = document.querySelector(
+          const noteElement = shadowRoot.querySelector(
             `.sticky-note[data-id='${id}']`,
           );
           if (noteElement) {
@@ -821,7 +1287,7 @@
       for (const id in newNotes) {
         const noteData = newNotes[id];
         let noteElement = /** @type {HTMLDivElement} */ (
-          document.querySelector(`.sticky-note[data-id='${id}']`)
+          shadowRoot.querySelector(`.sticky-note[data-id='${id}']`)
         );
 
         if (!noteElement) {
@@ -832,7 +1298,7 @@
           // Auto-focus newly created notes - wait for the note to be ready
 
           // Check if the note element is ready for focus
-          const noteElement = document.querySelector(
+          const noteElement = shadowRoot.querySelector(
             `.sticky-note[data-id='${id}']`,
           );
           if (noteElement && noteElement.hasAttribute('data-ready')) {
@@ -844,7 +1310,7 @@
           } else {
             // Note element doesn't exist yet, retry
             setTimeout(() => {
-              const retryNoteElement = document.querySelector(
+              const retryNoteElement = shadowRoot.querySelector(
                 `.sticky-note[data-id='${id}']`,
               );
               if (retryNoteElement) {
@@ -942,7 +1408,7 @@
           }
 
           // Update content only if this page is not actively editing the note
-          const currentNoteElement = document.querySelector(
+          const currentNoteElement = shadowRoot.querySelector(
             `.sticky-note[data-id='${id}']`,
           );
           const editor = currentNoteElement
@@ -989,7 +1455,9 @@
 
   // Function to focus a specific note by ID
   const focusNote = (id) => {
-    const noteElement = document.querySelector(`.sticky-note[data-id='${id}']`);
+    const noteElement = shadowRoot.querySelector(
+      `.sticky-note[data-id='${id}']`,
+    );
 
     if (document.visibilityState !== 'visible') {
       console.log(`Document is not visible, skipping focus for note ${id}`);
@@ -1114,7 +1582,7 @@
   // Function to blur all focused sticky notes and clear editing flags
   const blurAllStickyNotes = () => {
     // Blur any focused contenteditable editors
-    const focusedEditors = document.querySelectorAll(
+    const focusedEditors = shadowRoot.querySelectorAll(
       '.sticky-note-content .sticky-note-editor:focus',
     );
     focusedEditors.forEach((editor) => {
@@ -1148,10 +1616,12 @@
 
   // Close color dropdowns when clicking outside
   document.addEventListener('click', (e) => {
-    const dropdowns = document.querySelectorAll('.color-dropdown-menu.show');
+    if (!shadowRoot) return;
+    const dropdowns = shadowRoot.querySelectorAll('.color-dropdown-menu.show');
     dropdowns.forEach((dropdown) => {
       const colorDropdown = dropdown.closest('.color-dropdown');
       const target = /** @type {Node} */ (e.target);
+      // Check if click is outside shadow DOM or outside the dropdown
       if (colorDropdown && target && !colorDropdown.contains(target)) {
         dropdown.classList.remove('show');
       }
@@ -1160,8 +1630,10 @@
 
   // Also close dropdowns on escape key
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      const dropdowns = document.querySelectorAll('.color-dropdown-menu.show');
+    if (e.key === 'Escape' && shadowRoot) {
+      const dropdowns = shadowRoot.querySelectorAll(
+        '.color-dropdown-menu.show',
+      );
       dropdowns.forEach((dropdown) => {
         dropdown.classList.remove('show');
       });
