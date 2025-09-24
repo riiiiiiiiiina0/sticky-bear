@@ -148,6 +148,9 @@ const createNewNote = async (activeTab) => {
 
         console.log('Note saved successfully to storage');
 
+        // Update badge count after creating a new note
+        updateBadge();
+
         // After saving, send a message to the active tab to focus the new note.
         // The note element will be created by the onChanged listener in all tabs.
         if (activeTab && activeTab.id) {
@@ -261,7 +264,22 @@ chrome.commands.onCommand.addListener((command) => {
   });
 });
 
+// Update badge when extension starts up
+chrome.runtime.onStartup.addListener(() => {
+  updateBadge();
+});
+
+// Update badge whenever notes storage changes
+chrome.storage.onChanged.addListener((changes, namespace) => {
+  if (namespace === 'sync' && changes.notes) {
+    updateBadge();
+  }
+});
+
 chrome.runtime.onInstalled.addListener((details) => {
+  // Update badge on install/update
+  updateBadge();
+
   if (details.reason === 'install' || details.reason === 'update') {
     // Helper that determines whether a tab should be reloaded
     const shouldReloadTab = async (tab) => {
@@ -292,6 +310,31 @@ chrome.runtime.onInstalled.addListener((details) => {
     })();
   }
 });
+
+// Function to update the action badge with the current note count
+const updateBadge = () => {
+  chrome.storage.sync.get({ notes: {} }, (data) => {
+    if (chrome.runtime.lastError) {
+      console.error(
+        'Error reading notes for badge update:',
+        chrome.runtime.lastError,
+      );
+      return;
+    }
+
+    const notes = data.notes;
+    const noteCount = Object.keys(notes).length;
+
+    // Set badge text - show count if > 0, otherwise show nothing
+    const badgeText = noteCount > 0 ? noteCount.toString() : '';
+    chrome.action.setBadgeText({ text: badgeText });
+
+    // Set badge background color to a nice blue
+    chrome.action.setBadgeBackgroundColor({ color: '#4285f4' });
+
+    console.log(`Badge updated: ${noteCount} notes`);
+  });
+};
 
 // Device pixel ratio management
 let maxDevicePixelRatio = 1;
