@@ -11,6 +11,38 @@ document.addEventListener('DOMContentLoaded', () => {
   const deleteAllButton = /** @type {HTMLButtonElement} */ (
     document.getElementById('delete-all-button')
   );
+  const showBadgeCountCheckbox = /** @type {HTMLInputElement} */ (
+    document.getElementById('show-badge-count')
+  );
+
+  // Load current settings
+  chrome.storage.sync.get({ showBadgeCount: true }, (data) => {
+    if (chrome.runtime.lastError) {
+      console.error('Error loading settings:', chrome.runtime.lastError);
+      return;
+    }
+    showBadgeCountCheckbox.checked = data.showBadgeCount;
+  });
+
+  // Handle badge count setting change
+  if (showBadgeCountCheckbox) {
+    showBadgeCountCheckbox.addEventListener('change', () => {
+      const showBadgeCount = showBadgeCountCheckbox.checked;
+      chrome.storage.sync.set({ showBadgeCount }, () => {
+        if (chrome.runtime.lastError) {
+          console.error('Error saving setting:', chrome.runtime.lastError);
+          alert('Error saving setting: ' + chrome.runtime.lastError.message);
+        } else {
+          console.log('Badge count setting saved:', showBadgeCount);
+          // Notify background script to update badge immediately
+          chrome.runtime.sendMessage({
+            action: 'update_badge_setting',
+            showBadgeCount: showBadgeCount,
+          });
+        }
+      });
+    });
+  }
 
   // Export functionality
   if (exportButton) {

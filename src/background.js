@@ -269,9 +269,9 @@ chrome.runtime.onStartup.addListener(() => {
   updateBadge();
 });
 
-// Update badge whenever notes storage changes
+// Update badge whenever notes storage changes or badge setting changes
 chrome.storage.onChanged.addListener((changes, namespace) => {
-  if (namespace === 'sync' && changes.notes) {
+  if (namespace === 'sync' && (changes.notes || changes.showBadgeCount)) {
     updateBadge();
   }
 });
@@ -313,7 +313,7 @@ chrome.runtime.onInstalled.addListener((details) => {
 
 // Function to update the action badge with the current note count
 const updateBadge = () => {
-  chrome.storage.sync.get({ notes: {} }, (data) => {
+  chrome.storage.sync.get({ notes: {}, showBadgeCount: true }, (data) => {
     if (chrome.runtime.lastError) {
       console.error(
         'Error reading notes for badge update:',
@@ -323,16 +323,20 @@ const updateBadge = () => {
     }
 
     const notes = data.notes;
+    const showBadgeCount = data.showBadgeCount;
     const noteCount = Object.keys(notes).length;
 
-    // Set badge text - show count if > 0, otherwise show nothing
-    const badgeText = noteCount > 0 ? noteCount.toString() : '';
+    // Set badge text based on setting - show count if enabled and > 0, otherwise show nothing
+    const badgeText =
+      showBadgeCount && noteCount > 0 ? noteCount.toString() : '';
     chrome.action.setBadgeText({ text: badgeText });
 
     // Set badge background color to a nice blue
     chrome.action.setBadgeBackgroundColor({ color: '#4285f4' });
 
-    console.log(`Badge updated: ${noteCount} notes`);
+    console.log(
+      `Badge updated: ${noteCount} notes, showing: ${showBadgeCount}`,
+    );
   });
 };
 
@@ -340,7 +344,7 @@ const updateBadge = () => {
 let maxDevicePixelRatio = 1;
 const DEVICE_PIXEL_RATIO_MAX = 2;
 
-// Listen for DPR reports from content scripts
+// Listen for DPR reports from content scripts and settings updates
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (
     message.action === 'device_pixel_ratio' &&
@@ -369,5 +373,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         });
       }
     }
+  } else if (message.action === 'update_badge_setting') {
+    // Handle badge setting update from options page
+    console.log(
+      'Badge setting updated from options page:',
+      message.showBadgeCount,
+    );
+    updateBadge();
   }
 });
