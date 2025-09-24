@@ -19,28 +19,41 @@
     </h1>
 
     <div class="card">
-      <h2>Export Notes</h2>
-      <p>Save all your sticky notes to a JSON file.</p>
-      <button id="export-button">Export Notes</button>
-    </div>
+      <h2>Data Management</h2>
+      <p>Manage your sticky notes data: export for backup, import from a file, or delete all notes.</p>
 
-    <div class="card">
-      <h2>Import Notes</h2>
-      <p>
-        Load notes from a JSON backup file.
-        <strong>This will overwrite all current notes.</strong>
-      </p>
-      <input type="file" id="import-file" accept=".json" hidden />
-      <button id="import-button">Choose File & Import</button>
-    </div>
+      <div class="button-group">
+        <div class="button-item">
+          <h3>Export Notes</h3>
+          <div class="content">
+            <p>Save all your sticky notes to a JSON file.</p>
+          </div>
+          <button id="export-button">Export Notes</button>
+        </div>
 
-    <div class="card">
-      <h2>Delete All Notes</h2>
-      <p>
-        Permanently delete all sticky notes from all websites.
-        <strong>This action cannot be undone.</strong>
-      </p>
-      <button id="delete-all-button" class="danger-button">Delete All Notes</button>
+        <div class="button-item">
+          <h3>Import Notes</h3>
+          <div class="content">
+            <p>
+              Load notes from a JSON backup file.
+              <strong>This will overwrite all current notes.</strong>
+            </p>
+          </div>
+          <input type="file" id="import-file" accept=".json" hidden />
+          <button id="import-button">Choose File & Import</button>
+        </div>
+
+        <div class="button-item">
+          <h3>Delete All Notes</h3>
+          <div class="content">
+            <p>
+              Permanently delete all sticky notes from all websites.
+              <strong>This action cannot be undone.</strong>
+            </p>
+          </div>
+          <button id="delete-all-button" class="danger-button">Delete All Notes</button>
+        </div>
+      </div>
     </div>
   </div>
 
