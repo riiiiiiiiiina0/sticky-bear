@@ -15,8 +15,22 @@
 }
 
 .sticky-notes-container.collapsed .sticky-note {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Notes aligned to left edge collapse to the left */
+.sticky-notes-container.collapsed .sticky-note:not([style*="right:"]),
+.sticky-notes-container.collapsed .sticky-note[style*="right: auto"] {
   left: 0 !important;
+  right: auto !important;
   transform: translateX(calc(-100% + 15px));
+}
+
+/* Notes aligned to right edge collapse to the right */
+.sticky-notes-container.collapsed .sticky-note[style*="right:"][style*="left: auto"] {
+  right: 0 !important;
+  left: auto !important;
+  transform: translateX(calc(100% - 15px));
 }
 .sticky-notes-container.collapsing .sticky-note {
   transition: all 0.3s ease-in-out;
@@ -501,6 +515,98 @@
   let isActivelyEditing = {}; // Track which notes are being actively edited
   // Plain text contenteditable editor; no TinyMDE instances needed
 
+  // === Edge Alignment Functions ===
+
+  // Function to determine which edge a note should align to
+  const determineEdgeAlignment = (x, width, viewportWidth) => {
+    const noteRight = x + width;
+    const distanceToLeft = x;
+    const distanceToRight = viewportWidth - noteRight;
+
+    return distanceToLeft <= distanceToRight ? 'left' : 'right';
+  };
+
+  // Function to convert absolute positioning to edge-based positioning
+  const convertToEdgePosition = (noteElement, noteData) => {
+    const rect = noteElement.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const noteWidth = rect.width;
+
+    const edge = determineEdgeAlignment(rect.left, noteWidth, viewportWidth);
+
+    if (edge === 'left') {
+      return {
+        left: rect.left + 'px',
+        right: null,
+        edge: 'left',
+      };
+    } else {
+      return {
+        left: null,
+        right: viewportWidth - rect.right + 'px',
+        edge: 'right',
+      };
+    }
+  };
+
+  // Function to apply edge-based positioning to a note element
+  const applyEdgePosition = (noteElement, noteData) => {
+    if (
+      noteData.edge === 'right' &&
+      noteData.right !== null &&
+      noteData.right !== undefined
+    ) {
+      noteElement.style.left = 'auto';
+      noteElement.style.right = noteData.right;
+    } else {
+      noteElement.style.left = noteData.left || '0px';
+      noteElement.style.right = 'auto';
+    }
+    noteElement.style.top = noteData.top || '0px';
+  };
+
+  // Function to update all notes positions on window resize
+  const updateNotesOnResize = () => {
+    if (!shadowRoot) return;
+
+    const noteElements = shadowRoot.querySelectorAll('.sticky-note');
+    let hasChanges = false;
+
+    noteElements.forEach((noteElement) => {
+      const id = noteElement.getAttribute('data-id');
+      if (!notes[id]) return;
+
+      const currentRect = noteElement.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const noteWidth = currentRect.width;
+
+      const newEdge = determineEdgeAlignment(
+        currentRect.left,
+        noteWidth,
+        viewportWidth,
+      );
+      const currentEdge = notes[id].edge || 'left';
+
+      // If edge alignment should change, update the note
+      if (newEdge !== currentEdge) {
+        const newPosition = convertToEdgePosition(noteElement, notes[id]);
+
+        // Update note data
+        notes[id].left = newPosition.left;
+        notes[id].right = newPosition.right;
+        notes[id].edge = newPosition.edge;
+
+        // Apply new positioning
+        applyEdgePosition(noteElement, notes[id]);
+        hasChanges = true;
+      }
+    });
+
+    if (hasChanges) {
+      debouncedSaveNotes();
+    }
+  };
+
   // === Device Pixel Ratio (DPR) handling ===
   const localDpr = window.devicePixelRatio;
   let unifiedDpr = localDpr; // Will be updated from background script
@@ -513,8 +619,14 @@
     });
   };
 
-  // Debounce resize DPR reports
-  window.addEventListener('resize', debounce(reportDpr, 300));
+  // Debounce resize DPR reports and note position updates
+  window.addEventListener(
+    'resize',
+    debounce(() => {
+      reportDpr();
+      updateNotesOnResize();
+    }, 300),
+  );
   // Initial report
   reportDpr();
 
@@ -567,11 +679,49 @@
     }
   };
 
+  // Function to migrate existing notes to edge-based positioning
+  const migrateNotesToEdgePositioning = () => {
+    let hasChanges = false;
+
+    for (const id in notes) {
+      const note = notes[id];
+
+      // If note doesn't have edge property, migrate it
+      if (!note.edge && note.left) {
+        const leftValue = parseInt(note.left);
+        const viewportWidth = window.innerWidth;
+        const noteWidth = parseInt(note.width) || 200;
+
+        const edge = determineEdgeAlignment(
+          leftValue,
+          noteWidth,
+          viewportWidth,
+        );
+
+        if (edge === 'left') {
+          note.edge = 'left';
+          note.right = null;
+        } else {
+          note.edge = 'right';
+          note.right = viewportWidth - leftValue - noteWidth + 'px';
+          note.left = null;
+        }
+
+        hasChanges = true;
+      }
+    }
+
+    if (hasChanges) {
+      saveNotes();
+    }
+  };
+
   const loadNotes = () => {
     initializeStickyNotesContainer();
     chrome.storage.sync.get('notes', (data) => {
       if (data.notes) {
         notes = data.notes;
+        migrateNotesToEdgePositioning();
         renderNotes();
       }
     });
@@ -696,8 +846,10 @@
     noteElement.classList.add('sticky-note');
     noteElement.classList.add(`color-${note.backgroundColor || 'yellow'}`);
     noteElement.setAttribute('data-id', id);
-    noteElement.style.left = note.left;
-    noteElement.style.top = note.top;
+
+    // Apply edge-based positioning
+    applyEdgePosition(noteElement, note);
+
     noteElement.style.width = note.width || '200px';
     noteElement.style.height = note.height || '200px';
     noteElement.style.zIndex = note.zIndex || 1; // Default z-index
@@ -981,6 +1133,15 @@
       isDragging = true;
       pos3 = e.clientX;
       pos4 = e.clientY;
+
+      // During drag, ensure we use left positioning for smooth dragging
+      // If the element is currently positioned using 'right', convert to 'left' without jumping
+      if (element.style.right !== 'auto' && element.style.right !== '') {
+        const rect = element.getBoundingClientRect();
+        element.style.left = rect.left + 'px';
+      }
+      element.style.right = 'auto';
+
       document.onmouseup = closeDragElement;
       document.onmousemove = elementDrag;
     }
@@ -1001,8 +1162,16 @@
       isDragging = false;
       const id = element.getAttribute('data-id');
       if (notes[id]) {
-        notes[id].left = element.style.left;
+        // Convert current position to edge-based positioning
+        const newPosition = convertToEdgePosition(element, notes[id]);
+        notes[id].left = newPosition.left;
+        notes[id].right = newPosition.right;
+        notes[id].edge = newPosition.edge;
         notes[id].top = element.style.top;
+
+        // Apply the edge-based positioning
+        applyEdgePosition(element, notes[id]);
+
         debouncedSaveNotes();
       }
     }
@@ -1325,8 +1494,7 @@
         } else {
           // Note was updated, update position and z-index only if not currently dragging
           if (!isDragging) {
-            noteElement.style.left = noteData.left;
-            noteElement.style.top = noteData.top;
+            applyEdgePosition(noteElement, noteData);
             noteElement.style.width = noteData.width || '200px';
             noteElement.style.height = noteData.height || '200px';
           }
@@ -1642,13 +1810,17 @@
 
   // Mouse edge detection for toggling sticky notes collapse
   let isNearLeftEdge = false; // Track if mouse is currently near left edge
+  let isNearRightEdge = false; // Track if mouse is currently near right edge
 
   const handleMouseMove = (e) => {
     const mouseX = e.clientX;
-    const isCurrentlyNearEdge = mouseX < 20; // Within 20px of left edge
+    const viewportWidth = window.innerWidth;
 
-    // Only toggle when mouse enters the edge zone (not when leaving)
-    if (isCurrentlyNearEdge && !isNearLeftEdge) {
+    const isCurrentlyNearLeftEdge = mouseX < 20; // Within 20px of left edge
+    const isCurrentlyNearRightEdge = mouseX > viewportWidth - 20; // Within 20px of right edge
+
+    // Handle left edge
+    if (isCurrentlyNearLeftEdge && !isNearLeftEdge) {
       isNearLeftEdge = true;
 
       if (stickyNotesContainer) {
@@ -1663,9 +1835,28 @@
           stickyNotesContainer.classList.add('collapsing');
         }
       }
-    } else if (!isCurrentlyNearEdge && isNearLeftEdge) {
-      // Update state when mouse leaves edge zone
+    } else if (!isCurrentlyNearLeftEdge && isNearLeftEdge) {
       isNearLeftEdge = false;
+    }
+
+    // Handle right edge
+    if (isCurrentlyNearRightEdge && !isNearRightEdge) {
+      isNearRightEdge = true;
+
+      if (stickyNotesContainer) {
+        if (stickyNotesContainer.classList.contains('collapsed')) {
+          stickyNotesContainer.classList.remove('collapsed');
+          setTimeout(
+            () => stickyNotesContainer.classList.remove('collapsing'),
+            300,
+          );
+        } else {
+          stickyNotesContainer.classList.add('collapsed');
+          stickyNotesContainer.classList.add('collapsing');
+        }
+      }
+    } else if (!isCurrentlyNearRightEdge && isNearRightEdge) {
+      isNearRightEdge = false;
     }
   };
 
