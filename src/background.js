@@ -1,6 +1,12 @@
 // Function to parse position string to number (e.g., "100px" -> 100)
 const parsePosition = (posStr) => {
-  return parseInt(posStr.replace('px', ''), 10) || 0;
+  if (!posStr || posStr === null || posStr === undefined) {
+    return 0;
+  }
+  if (typeof posStr === 'number') {
+    return posStr;
+  }
+  return parseInt(String(posStr).replace('px', ''), 10) || 0;
 };
 
 // Function to check if two rectangles overlap
@@ -31,12 +37,19 @@ const findNonOverlappingPosition = (existingNotes, viewportWidth = 1400) => {
   }
 
   // Create list of existing note rectangles
-  const existingRects = Object.values(existingNotes).map((note) => ({
-    left: parsePosition(note.left),
-    top: parsePosition(note.top),
-    right: parsePosition(note.left) + parsePosition(note.width || '200px'),
-    bottom: parsePosition(note.top) + parsePosition(note.height || '200px'),
-  }));
+  const existingRects = Object.values(existingNotes).map((note) => {
+    const left = parsePosition(note.left);
+    const top = parsePosition(note.top);
+    const width = parsePosition(note.width || '200px');
+    const height = parsePosition(note.height || '200px');
+
+    return {
+      left: left,
+      top: top,
+      right: left + width,
+      bottom: top + height,
+    };
+  });
 
   // Start from default position and search for a non-overlapping spot
   let candidatePosition = { ...defaultPosition };
@@ -95,21 +108,23 @@ const findNonOverlappingPosition = (existingNotes, viewportWidth = 1400) => {
 const createNewNote = async (activeTab) => {
   const newNoteId = Date.now().toString();
 
-  try {
-    // Get the actual tab width using Chrome tabs API
-    const [tab] = await chrome.tabs.query({
-      active: true,
-      currentWindow: true,
-    });
+  // Use a more reliable fallback approach
+  const createNoteWithPosition = (viewportWidth = 1400) => {
+    console.log('Creating note with viewport width:', viewportWidth);
 
-    const viewportWidth = tab.width || 1400; // Fallback to 1400 if width not available
-
-    // Get existing notes to determine optimal position
     chrome.storage.sync.get({ notes: {} }, (data) => {
-      const notes = data.notes;
+      if (chrome.runtime.lastError) {
+        console.error('Error reading from storage:', chrome.runtime.lastError);
+        return;
+      }
 
-      // Find a non-overlapping position using actual tab width
+      const notes = data.notes;
+      console.log('Current notes in storage:', Object.keys(notes).length);
+      console.log('Existing notes data:', notes);
+
+      // Find a non-overlapping position
       const position = findNonOverlappingPosition(notes, viewportWidth);
+      console.log('Calculated position for new note:', position);
 
       const newNote = {
         content: '',
@@ -118,10 +133,25 @@ const createNewNote = async (activeTab) => {
       };
 
       notes[newNoteId] = newNote;
+      console.log(
+        'About to save note with ID:',
+        newNoteId,
+        'Note data:',
+        newNote,
+      );
+
       chrome.storage.sync.set({ notes }, () => {
+        if (chrome.runtime.lastError) {
+          console.error('Error saving to storage:', chrome.runtime.lastError);
+          return;
+        }
+
+        console.log('Note saved successfully to storage');
+
         // After saving, send a message to the active tab to focus the new note.
         // The note element will be created by the onChanged listener in all tabs.
-        if (activeTab.id) {
+        if (activeTab && activeTab.id) {
+          console.log('Sending focus message to tab:', activeTab.id);
           chrome.tabs.sendMessage(
             activeTab.id,
             {
@@ -131,16 +161,39 @@ const createNewNote = async (activeTab) => {
             (response) => {
               if (chrome.runtime.lastError) {
                 // Ignore errors, e.g., if the content script isn't ready.
+                console.log(
+                  'Content script not ready:',
+                  chrome.runtime.lastError.message,
+                );
+              } else {
+                console.log(
+                  'Focus message sent successfully, response:',
+                  response,
+                );
               }
             },
           );
+        } else {
+          console.error('No active tab available for focus message');
         }
       });
     });
+  };
+
+  try {
+    // Try to get the actual tab width using Chrome tabs API
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+
+    // Use tab width if available, otherwise use default
+    const viewportWidth = tab && tab.width ? tab.width : 1400;
+    createNoteWithPosition(viewportWidth);
   } catch (error) {
-    console.error('Error getting tab width:', error);
+    console.error('Error getting tab info:', error);
     // Fallback to default positioning if there's an error
-    createNoteWithFallback(newNoteId, activeTab);
+    createNoteWithPosition(1400);
   }
 };
 
@@ -176,7 +229,10 @@ const createNoteWithFallback = (newNoteId, activeTab) => {
   });
 };
 
-chrome.action.onClicked.addListener(createNewNote);
+chrome.action.onClicked.addListener((tab) => {
+  console.log('Extension icon clicked, creating new note for tab:', tab.id);
+  createNewNote(tab);
+});
 
 // Handle keyboard commands
 chrome.commands.onCommand.addListener((command) => {

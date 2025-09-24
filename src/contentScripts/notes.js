@@ -649,6 +649,8 @@
   // Ensure scale is applied once the container exists
   const initializeStickyNotesContainer = () => {
     if (!stickyNotesContainer) {
+      console.log('Initializing sticky notes container');
+
       // Create Shadow DOM host element
       shadowHost = document.createElement('div');
       shadowHost.classList.add('sunny-bear-excluded');
@@ -676,6 +678,8 @@
 
       // Apply scaling based on unified DPR when container is first created
       applyContainerScale();
+
+      console.log('Sticky notes container initialized successfully');
     }
   };
 
@@ -717,14 +721,29 @@
   };
 
   const loadNotes = () => {
-    initializeStickyNotesContainer();
-    chrome.storage.sync.get('notes', (data) => {
-      if (data.notes) {
-        notes = data.notes;
-        migrateNotesToEdgePositioning();
-        renderNotes();
-      }
-    });
+    try {
+      initializeStickyNotesContainer();
+      chrome.storage.sync.get('notes', (data) => {
+        if (chrome.runtime.lastError) {
+          console.error(
+            'Error loading notes from storage:',
+            chrome.runtime.lastError,
+          );
+          return;
+        }
+
+        if (data.notes) {
+          notes = data.notes;
+          migrateNotesToEdgePositioning();
+          renderNotes();
+          console.log('Loaded', Object.keys(notes).length, 'sticky notes');
+        } else {
+          console.log('No existing sticky notes found');
+        }
+      });
+    } catch (error) {
+      console.error('Error in loadNotes:', error);
+    }
   };
 
   const renderNotes = () => {
@@ -842,10 +861,29 @@
   };
 
   const createNoteElement = (id, note) => {
+    console.log('createNoteElement called with ID:', id, 'note:', note);
+
+    if (!shadowRoot) {
+      console.error('❌ shadowRoot is null, cannot create note element');
+      return;
+    }
+
+    if (!stickyNotesContainer) {
+      console.error(
+        '❌ stickyNotesContainer is null, cannot create note element',
+      );
+      return;
+    }
+
     const noteElement = document.createElement('div');
     noteElement.classList.add('sticky-note');
     noteElement.classList.add(`color-${note.backgroundColor || 'yellow'}`);
     noteElement.setAttribute('data-id', id);
+
+    console.log(
+      'Note element created with classes:',
+      noteElement.classList.toString(),
+    );
 
     // Apply edge-based positioning
     applyEdgePosition(noteElement, note);
@@ -1091,6 +1129,8 @@
     // Initial state: show rendered if editor is not focused
     // Note: document.activeElement won't work with shadow DOM, so we'll default to rendered view
     showRendered();
+
+    console.log('✅ createNoteElement completed successfully for ID:', id);
   };
 
   const bringToFront = (id) => {
@@ -1431,193 +1471,225 @@
   });
 
   chrome.storage.onChanged.addListener((changes, namespace) => {
-    if (changes.notes) {
-      const oldNotes = changes.notes.oldValue || {};
-      const newNotes = changes.notes.newValue || {};
-      notes = newNotes; // Keep local notes object in sync
+    try {
+      console.log(
+        'Storage change event received, namespace:',
+        namespace,
+        'changes:',
+        changes,
+      );
+      if (changes.notes) {
+        console.log('Storage changed - notes updated');
+        const oldNotes = changes.notes.oldValue || {};
+        const newNotes = changes.notes.newValue || {};
+        console.log('Old notes count:', Object.keys(oldNotes).length);
+        console.log('New notes count:', Object.keys(newNotes).length);
+        notes = newNotes; // Keep local notes object in sync
 
-      // Handle deleted notes
-      for (const id in oldNotes) {
-        if (!newNotes[id]) {
-          // No editor instances to clean up with contenteditable
-          delete lastEditTimestamp[id];
-          delete isActivelyEditing[id];
+        // Handle deleted notes
+        for (const id in oldNotes) {
+          if (!newNotes[id]) {
+            // No editor instances to clean up with contenteditable
+            delete lastEditTimestamp[id];
+            delete isActivelyEditing[id];
 
-          const noteElement = shadowRoot.querySelector(
-            `.sticky-note[data-id='${id}']`,
-          );
-          if (noteElement) {
-            noteElement.remove();
+            const noteElement = shadowRoot.querySelector(
+              `.sticky-note[data-id='${id}']`,
+            );
+            if (noteElement) {
+              noteElement.remove();
+            }
           }
         }
-      }
 
-      // Handle added or updated notes
-      for (const id in newNotes) {
-        const noteData = newNotes[id];
-        let noteElement = /** @type {HTMLDivElement} */ (
-          shadowRoot.querySelector(`.sticky-note[data-id='${id}']`)
-        );
-
-        if (!noteElement) {
-          // Note was added
-          initializeStickyNotesContainer();
-          createNoteElement(id, noteData);
-
-          // Auto-focus newly created notes - wait for the note to be ready
-
-          // Check if the note element is ready for focus
-          const noteElement = shadowRoot.querySelector(
-            `.sticky-note[data-id='${id}']`,
+        // Handle added or updated notes
+        for (const id in newNotes) {
+          const noteData = newNotes[id];
+          console.log('Processing note:', id, 'data:', noteData);
+          let noteElement = /** @type {HTMLDivElement} */ (
+            shadowRoot.querySelector(`.sticky-note[data-id='${id}']`)
           );
-          if (noteElement && noteElement.hasAttribute('data-ready')) {
-            // Note is ready, focus immediately
-            setTimeout(() => focusNote(id), 10);
-          } else if (noteElement) {
-            // Note is not ready yet, mark it for pending focus
-            noteElement.setAttribute('data-pending-focus', 'true');
-          } else {
-            // Note element doesn't exist yet, retry
-            setTimeout(() => {
-              const retryNoteElement = shadowRoot.querySelector(
-                `.sticky-note[data-id='${id}']`,
+
+          if (!noteElement) {
+            // Note was added
+            console.log('Creating new note element for ID:', id);
+            initializeStickyNotesContainer();
+            createNoteElement(id, noteData);
+            console.log(
+              'Note element created, checking if it exists in DOM...',
+            );
+
+            // Verify the note was actually created
+            const createdElement = shadowRoot.querySelector(
+              `.sticky-note[data-id='${id}']`,
+            );
+            if (createdElement) {
+              console.log(
+                '✅ Note element successfully created and found in DOM',
               );
-              if (retryNoteElement) {
-                if (retryNoteElement.hasAttribute('data-ready')) {
-                  setTimeout(() => focusNote(id), 10);
-                } else {
-                  retryNoteElement.setAttribute('data-pending-focus', 'true');
+            } else {
+              console.error(
+                '❌ Note element was not found in DOM after creation',
+              );
+            }
+
+            // Auto-focus newly created notes - wait for the note to be ready
+
+            // Check if the note element is ready for focus
+            const noteElement = shadowRoot.querySelector(
+              `.sticky-note[data-id='${id}']`,
+            );
+            if (noteElement && noteElement.hasAttribute('data-ready')) {
+              // Note is ready, focus immediately
+              setTimeout(() => focusNote(id), 10);
+            } else if (noteElement) {
+              // Note is not ready yet, mark it for pending focus
+              noteElement.setAttribute('data-pending-focus', 'true');
+            } else {
+              // Note element doesn't exist yet, retry
+              setTimeout(() => {
+                const retryNoteElement = shadowRoot.querySelector(
+                  `.sticky-note[data-id='${id}']`,
+                );
+                if (retryNoteElement) {
+                  if (retryNoteElement.hasAttribute('data-ready')) {
+                    setTimeout(() => focusNote(id), 10);
+                  } else {
+                    retryNoteElement.setAttribute('data-pending-focus', 'true');
+                  }
+                }
+              }, 50);
+            }
+          } else {
+            // Note was updated, update position and z-index only if not currently dragging
+            if (!isDragging) {
+              applyEdgePosition(noteElement, noteData);
+              noteElement.style.width = noteData.width || '200px';
+              noteElement.style.height = noteData.height || '200px';
+            }
+            noteElement.style.zIndex = noteData.zIndex || 1;
+
+            // Update minimized state
+            if (noteData.minimized) {
+              if (!noteElement.classList.contains('minimized')) {
+                noteElement.classList.add('minimized');
+                // Update header text (use plain text)
+                const headerText = /** @type {HTMLSpanElement} */ (
+                  noteElement.querySelector('.header-text')
+                );
+                if (headerText) {
+                  const content = noteData.content || '';
+                  const plainText = stripMarkdown(content);
+                  headerText.innerText =
+                    plainText.substring(0, 30) +
+                    (plainText.length > 30 ? '...' : '');
                 }
               }
-            }, 50);
-          }
-        } else {
-          // Note was updated, update position and z-index only if not currently dragging
-          if (!isDragging) {
-            applyEdgePosition(noteElement, noteData);
-            noteElement.style.width = noteData.width || '200px';
-            noteElement.style.height = noteData.height || '200px';
-          }
-          noteElement.style.zIndex = noteData.zIndex || 1;
-
-          // Update minimized state
-          if (noteData.minimized) {
-            if (!noteElement.classList.contains('minimized')) {
-              noteElement.classList.add('minimized');
-              // Update header text (use plain text)
+            } else {
+              noteElement.classList.remove('minimized');
+              // Clear header text when not minimized
               const headerText = /** @type {HTMLSpanElement} */ (
                 noteElement.querySelector('.header-text')
               );
               if (headerText) {
-                const content = noteData.content || '';
-                const plainText = stripMarkdown(content);
-                headerText.innerText =
-                  plainText.substring(0, 30) +
-                  (plainText.length > 30 ? '...' : '');
+                headerText.innerText = '';
               }
             }
-          } else {
-            noteElement.classList.remove('minimized');
-            // Clear header text when not minimized
-            const headerText = /** @type {HTMLSpanElement} */ (
-              noteElement.querySelector('.header-text')
-            );
-            if (headerText) {
-              headerText.innerText = '';
-            }
-          }
 
-          // Update background color if changed
-          const currentColorClass = Array.from(noteElement.classList).find(
-            (cls) => cls.startsWith('color-'),
-          );
-          const expectedColorClass = `color-${
-            noteData.backgroundColor || 'yellow'
-          }`;
-          if (currentColorClass !== expectedColorClass) {
-            // Remove all color classes
-            noteElement.classList.remove(
-              'color-yellow',
-              'color-green',
-              'color-blue',
-              'color-red',
-              'color-gray',
+            // Update background color if changed
+            const currentColorClass = Array.from(noteElement.classList).find(
+              (cls) => cls.startsWith('color-'),
             );
-            // Add the new color class
-            noteElement.classList.add(expectedColorClass);
+            const expectedColorClass = `color-${
+              noteData.backgroundColor || 'yellow'
+            }`;
+            if (currentColorClass !== expectedColorClass) {
+              // Remove all color classes
+              noteElement.classList.remove(
+                'color-yellow',
+                'color-green',
+                'color-blue',
+                'color-red',
+                'color-gray',
+              );
+              // Add the new color class
+              noteElement.classList.add(expectedColorClass);
 
-            // Update the dropdown button color
-            const button = /** @type {HTMLButtonElement} */ (
-              noteElement.querySelector('.color-dropdown-button')
-            );
-            if (button) {
-              const colors = {
-                yellow: '#ffff99',
-                green: '#90ee90',
-                blue: '#99ccff',
-                red: '#ff9999',
-                gray: '#cccccc',
-              };
-              button.style.backgroundColor =
-                colors[noteData.backgroundColor || 'yellow'];
-            }
-
-            // Update selected option in dropdown
-            const options = noteElement.querySelectorAll('.color-option');
-            options.forEach((option) => {
-              const optionElement = /** @type {HTMLDivElement} */ (option);
-              optionElement.classList.remove('selected');
-              if (
-                optionElement.title === (noteData.backgroundColor || 'yellow')
-              ) {
-                optionElement.classList.add('selected');
+              // Update the dropdown button color
+              const button = /** @type {HTMLButtonElement} */ (
+                noteElement.querySelector('.color-dropdown-button')
+              );
+              if (button) {
+                const colors = {
+                  yellow: '#ffff99',
+                  green: '#90ee90',
+                  blue: '#99ccff',
+                  red: '#ff9999',
+                  gray: '#cccccc',
+                };
+                button.style.backgroundColor =
+                  colors[noteData.backgroundColor || 'yellow'];
               }
-            });
-          }
 
-          // Update content only if this page is not actively editing the note
-          const currentNoteElement = shadowRoot.querySelector(
-            `.sticky-note[data-id='${id}']`,
-          );
-          const editor = currentNoteElement
-            ? currentNoteElement.querySelector('.sticky-note-editor')
-            : null;
-
-          // Check if we should update the content
-          const shouldUpdate =
-            !isActivelyEditing[id] &&
-            noteData.lastEditTimestamp &&
-            noteData.lastEditTimestamp > (lastEditTimestamp[id] || 0);
-
-          if (
-            shouldUpdate &&
-            editor &&
-            editor.textContent !== noteData.content
-          ) {
-            const wasFocused = document.activeElement === editor;
-            let selectionOffset = 0;
-            if (wasFocused) {
-              const selection = window.getSelection();
-              if (selection && selection.anchorNode) {
-                selectionOffset = selection.anchorOffset;
-              }
+              // Update selected option in dropdown
+              const options = noteElement.querySelectorAll('.color-option');
+              options.forEach((option) => {
+                const optionElement = /** @type {HTMLDivElement} */ (option);
+                optionElement.classList.remove('selected');
+                if (
+                  optionElement.title === (noteData.backgroundColor || 'yellow')
+                ) {
+                  optionElement.classList.add('selected');
+                }
+              });
             }
-            editor.textContent = noteData.content || '';
-            lastEditTimestamp[id] = noteData.lastEditTimestamp || Date.now();
-            if (wasFocused) {
-              // Restore cursor to end
-              const range = document.createRange();
-              range.selectNodeContents(editor);
-              range.collapse(false);
-              const sel = window.getSelection();
-              if (sel) {
-                sel.removeAllRanges();
-                sel.addRange(range);
+
+            // Update content only if this page is not actively editing the note
+            const currentNoteElement = shadowRoot.querySelector(
+              `.sticky-note[data-id='${id}']`,
+            );
+            const editor = currentNoteElement
+              ? currentNoteElement.querySelector('.sticky-note-editor')
+              : null;
+
+            // Check if we should update the content
+            const shouldUpdate =
+              !isActivelyEditing[id] &&
+              noteData.lastEditTimestamp &&
+              noteData.lastEditTimestamp > (lastEditTimestamp[id] || 0);
+
+            if (
+              shouldUpdate &&
+              editor &&
+              editor.textContent !== noteData.content
+            ) {
+              const wasFocused = document.activeElement === editor;
+              let selectionOffset = 0;
+              if (wasFocused) {
+                const selection = window.getSelection();
+                if (selection && selection.anchorNode) {
+                  selectionOffset = selection.anchorOffset;
+                }
+              }
+              editor.textContent = noteData.content || '';
+              lastEditTimestamp[id] = noteData.lastEditTimestamp || Date.now();
+              if (wasFocused) {
+                // Restore cursor to end
+                const range = document.createRange();
+                range.selectNodeContents(editor);
+                range.collapse(false);
+                const sel = window.getSelection();
+                if (sel) {
+                  sel.removeAllRanges();
+                  sel.addRange(range);
+                }
               }
             }
           }
         }
       }
+    } catch (error) {
+      console.error('Error in storage change listener:', error);
     }
   });
 
@@ -1862,6 +1934,11 @@
 
   // Add mouse move listener to document
   document.addEventListener('mousemove', handleMouseMove);
+
+  // Add some debugging info
+  console.log('Sticky Bear content script loaded');
+  console.log('Chrome runtime available:', !!chrome.runtime);
+  console.log('Chrome storage available:', !!chrome.storage);
 
   loadNotes();
 })();
