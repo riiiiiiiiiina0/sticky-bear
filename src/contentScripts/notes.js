@@ -540,18 +540,24 @@
     const viewportWidth = window.innerWidth;
     const noteWidth = rect.width;
 
+    // Account for container scaling when converting positions
+    const scale = unifiedDpr / window.devicePixelRatio;
+    const scaledLeft = rect.left / scale;
+    const scaledRight = rect.right / scale;
+    const scaledViewportWidth = viewportWidth / scale;
+
     const edge = determineEdgeAlignment(rect.left, noteWidth, viewportWidth);
 
     if (edge === 'left') {
       return {
-        left: rect.left + 'px',
+        left: scaledLeft + 'px',
         right: null,
         edge: 'left',
       };
     } else {
       return {
         left: null,
-        right: viewportWidth - rect.right + 'px',
+        right: scaledViewportWidth - scaledRight + 'px',
         edge: 'right',
       };
     }
@@ -1268,7 +1274,10 @@
       // If the element is currently positioned using 'right', convert to 'left' without jumping
       if (element.style.right !== 'auto' && element.style.right !== '') {
         const rect = element.getBoundingClientRect();
-        element.style.left = rect.left + 'px';
+        // Account for container scaling when converting from right to left positioning
+        const scale = unifiedDpr / window.devicePixelRatio;
+        const scaledLeft = rect.left / scale;
+        element.style.left = scaledLeft + 'px';
       }
       element.style.right = 'auto';
 
@@ -1283,27 +1292,34 @@
       pos3 = e.clientX;
       pos4 = e.clientY;
 
+      // Account for container scaling when calculating movement
+      const scale = unifiedDpr / window.devicePixelRatio;
+      const scaledPos1 = pos1 / scale;
+      const scaledPos2 = pos2 / scale;
+
       // Calculate new position
-      const newTop = element.offsetTop - pos2;
-      const newLeft = element.offsetLeft - pos1;
+      const newTop = element.offsetTop - scaledPos2;
+      const newLeft = element.offsetLeft - scaledPos1;
 
       // Get viewport dimensions
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
 
-      // Get element dimensions
+      // Get element dimensions and account for container scaling
       const elementRect = element.getBoundingClientRect();
-      const elementWidth = elementRect.width;
-      const elementHeight = elementRect.height;
+      const scaledElementWidth = elementRect.width / scale;
+      const scaledElementHeight = elementRect.height / scale;
+      const scaledViewportWidth = viewportWidth / scale;
+      const scaledViewportHeight = viewportHeight / scale;
 
       // Apply viewport boundary constraints
       const constrainedTop = Math.max(
         0,
-        Math.min(newTop, viewportHeight - elementHeight),
+        Math.min(newTop, scaledViewportHeight - scaledElementHeight),
       );
       const constrainedLeft = Math.max(
         0,
-        Math.min(newLeft, viewportWidth - elementWidth),
+        Math.min(newLeft, scaledViewportWidth - scaledElementWidth),
       );
 
       element.style.top = constrainedTop + 'px';
@@ -1352,8 +1368,13 @@
     function doResize(e) {
       if (!isResizing) return;
 
-      const newWidth = startWidth + e.clientX - startX;
-      const newHeight = startHeight + e.clientY - startY;
+      // Account for container scaling when calculating resize
+      const scale = unifiedDpr / window.devicePixelRatio;
+      const scaledDeltaX = (e.clientX - startX) / scale;
+      const scaledDeltaY = (e.clientY - startY) / scale;
+
+      const newWidth = startWidth + scaledDeltaX;
+      const newHeight = startHeight + scaledDeltaY;
 
       // Set minimum dimensions
       const minWidth = 150;
@@ -1365,12 +1386,15 @@
 
       // Get current element position
       const elementRect = element.getBoundingClientRect();
-      const elementLeft = elementRect.left;
-      const elementTop = elementRect.top;
+      // Account for container scaling when calculating boundaries
+      const scaledElementLeft = elementRect.left / scale;
+      const scaledElementTop = elementRect.top / scale;
+      const scaledViewportWidth = viewportWidth / scale;
+      const scaledViewportHeight = viewportHeight / scale;
 
       // Calculate maximum allowed dimensions based on viewport boundaries
-      const maxWidth = viewportWidth - elementLeft;
-      const maxHeight = viewportHeight - elementTop;
+      const maxWidth = scaledViewportWidth - scaledElementLeft;
+      const maxHeight = scaledViewportHeight - scaledElementTop;
 
       // Apply constraints: minimum dimensions and viewport boundaries
       const constrainedWidth = Math.max(minWidth, Math.min(newWidth, maxWidth));
