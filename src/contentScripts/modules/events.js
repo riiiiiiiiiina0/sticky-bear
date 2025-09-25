@@ -257,6 +257,57 @@ export const setupGlobalEvents = () => {
     });
   });
 
+  // Keyboard navigation inside editor: Tab cycles notes, Escape blurs editor
+  const handleEditorKeyNavigation = (e) => {
+    try {
+      const sr = getShadowRoot();
+      if (!sr) return;
+      const activeEl = /** @type {HTMLElement} */ (
+        /** @type {any} */ (sr).activeElement
+      );
+      if (
+        !activeEl ||
+        !activeEl.classList ||
+        !activeEl.classList.contains('sticky-note-editor')
+      ) {
+        return;
+      }
+
+      if (e.key === 'Tab') {
+        // Move focus to next/previous sticky note editor
+        e.preventDefault();
+        e.stopPropagation();
+
+        const notes = Array.from(sr.querySelectorAll('.sticky-note'));
+        if (!notes.length) return;
+        const currentNote = activeEl.closest('.sticky-note');
+        if (!currentNote) return;
+        const currentIndex = notes.indexOf(currentNote);
+        if (currentIndex === -1) return;
+        const direction = e.shiftKey ? -1 : 1;
+        const nextIndex =
+          (currentIndex + direction + notes.length) % notes.length;
+        const targetNote = /** @type {HTMLElement} */ (notes[nextIndex]);
+        const targetId = targetNote.getAttribute('data-id');
+
+        if (targetId) {
+          focusNote(targetId);
+        }
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        // Blur editor and let other Escape handlers run
+        e.preventDefault();
+        /** @type {HTMLElement} */ (activeEl).blur();
+        return;
+      }
+    } catch {}
+  };
+
+  // Use capture so page-level handlers don't steal Tab navigation
+  document.addEventListener('keydown', handleEditorKeyNavigation, true);
+
   // Capture-phase keyboard and clipboard guards to isolate editor from page handlers
   // Allow default browser behavior (copy/cut/select-all/etc.), but stop propagation
   // so page-level listeners (especially capture-phase) cannot cancel them.
