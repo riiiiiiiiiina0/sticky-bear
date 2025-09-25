@@ -257,6 +257,44 @@ export const setupGlobalEvents = () => {
     });
   });
 
+  // Capture-phase keyboard and clipboard guards to isolate editor from page handlers
+  // Allow default browser behavior (copy/cut/select-all/etc.), but stop propagation
+  // so page-level listeners (especially capture-phase) cannot cancel them.
+  const stopIfInEditor = (e) => {
+    try {
+      const sr = getShadowRoot();
+      if (!sr) return;
+
+      // Determine if focus is currently inside the sticky note editor
+      const activeEl = /** @type {any} */ (sr).activeElement;
+      const isInEditor =
+        activeEl &&
+        activeEl.classList &&
+        activeEl.classList.contains('sticky-note-editor');
+
+      if (!isInEditor) return;
+
+      // Do not interfere with Escape so existing handlers (e.g., closing menus) still run
+      if (/** @type {KeyboardEvent} */ (e).key === 'Escape') return;
+
+      // Only guard for common shortcut combos and clipboard events
+      const ev = /** @type {KeyboardEvent} */ (e);
+      const isShortcutCombo = !!(ev && (ev.metaKey || ev.ctrlKey));
+      const isClipboardEvent = e.type === 'copy' || e.type === 'cut';
+
+      if (isShortcutCombo || isClipboardEvent) {
+        e.stopPropagation();
+      }
+    } catch {}
+  };
+
+  // Use capture to run before page-level listeners
+  document.addEventListener('keydown', stopIfInEditor, true);
+  document.addEventListener('keyup', stopIfInEditor, true);
+  document.addEventListener('keypress', stopIfInEditor, true);
+  document.addEventListener('copy', stopIfInEditor, true);
+  document.addEventListener('cut', stopIfInEditor, true);
+
   // Also close dropdowns on escape key
   document.addEventListener('keydown', (e) => {
     const shadowRoot = getShadowRoot();
