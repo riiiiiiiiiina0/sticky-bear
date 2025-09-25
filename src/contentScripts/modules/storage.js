@@ -76,10 +76,10 @@ export const loadNotes = () => {
 
         if (data.notes) {
           notes = data.notes;
-          console.log('Loaded', Object.keys(notes).length, 'sticky notes');
+          // console.log('Loaded', Object.keys(notes).length, 'sticky notes');
           resolve(notes);
         } else {
-          console.log('No existing sticky notes found');
+          // console.log('No existing sticky notes found');
           resolve({});
         }
       });

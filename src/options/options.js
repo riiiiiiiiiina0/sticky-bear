@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
           console.error('Error saving setting:', chrome.runtime.lastError);
           alert('Error saving setting: ' + chrome.runtime.lastError.message);
         } else {
-          console.log('Badge count setting saved:', showBadgeCount);
+          // console.log('Badge count setting saved:', showBadgeCount);
           // Notify background script to update badge immediately
           chrome.runtime.sendMessage({
             action: 'update_badge_setting',

@@ -25,12 +25,12 @@ export const setUnifiedDpr = (dpr) => {
 export const applyContainerScale = () => {
   if (!stickyNotesContainer) return;
   const scale = unifiedDpr / window.devicePixelRatio;
-  console.log(
-    'Applying container scale',
-    scale,
-    unifiedDpr,
-    window.devicePixelRatio,
-  );
+  // console.log(
+  //   'Applying container scale',
+  //   scale,
+  //   unifiedDpr,
+  //   window.devicePixelRatio,
+  // );
   stickyNotesContainer.style.transformOrigin = '0 0';
   stickyNotesContainer.style.transform = `scale(${scale})`;
   stickyNotesContainer.style.width = `${100 / scale}%`;
@@ -40,7 +40,7 @@ export const applyContainerScale = () => {
 // Initialize sticky notes container with Shadow DOM
 export const initializeStickyNotesContainer = () => {
   if (!stickyNotesContainer) {
-    console.log('Initializing sticky notes container');
+    // console.log('Initializing sticky notes container');
 
     // Create Shadow DOM host element
     shadowHost = document.createElement('div');
@@ -70,7 +70,7 @@ export const initializeStickyNotesContainer = () => {
     // Apply scaling based on unified DPR when container is first created
     applyContainerScale();
 
-    console.log('Sticky notes container initialized successfully');
+    // console.log('Sticky notes container initialized successfully');
   }
 };
 

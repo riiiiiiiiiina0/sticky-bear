@@ -23,9 +23,9 @@ export const updateBadge = () => {
     // Set badge background color to a nice blue
     chrome.action.setBadgeBackgroundColor({ color: '#4285f4' });
 
-    console.log(
-      `Badge updated: ${noteCount} notes, showing: ${showBadgeCount}`,
-    );
+    // console.log(
+    //   `Badge updated: ${noteCount} notes, showing: ${showBadgeCount}`,
+    // );
   });
 };
 

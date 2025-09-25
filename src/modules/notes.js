@@ -8,7 +8,7 @@ export const createNewNote = async (activeTab) => {
 
   // Create a note at a fixed initial position and bring it to front
   const createNoteWithPosition = () => {
-    console.log('Creating note at fixed initial position (20px, 20px)');
+    // console.log('Creating note at fixed initial position (20px, 20px)');
 
     chrome.storage.sync.get({ notes: {} }, (data) => {
       if (chrome.runtime.lastError) {
@@ -17,8 +17,8 @@ export const createNewNote = async (activeTab) => {
       }
 
       const notes = data.notes;
-      console.log('Current notes in storage:', Object.keys(notes).length);
-      console.log('Existing notes data:', notes);
+      // console.log('Current notes in storage:', Object.keys(notes).length);
+      // console.log('Existing notes data:', notes);
 
       // Compute z-index so the new note appears on top
       const maxZ = Object.values(notes).reduce((m, n) => {
@@ -37,12 +37,12 @@ export const createNewNote = async (activeTab) => {
       };
 
       notes[newNoteId] = newNote;
-      console.log(
-        'About to save note with ID:',
-        newNoteId,
-        'Note data:',
-        newNote,
-      );
+      // console.log(
+      //   'About to save note with ID:',
+      //   newNoteId,
+      //   'Note data:',
+      //   newNote,
+      // );
 
       chrome.storage.sync.set({ notes }, () => {
         if (chrome.runtime.lastError) {
@@ -50,7 +50,7 @@ export const createNewNote = async (activeTab) => {
           return;
         }
 
-        console.log('Note saved successfully to storage');
+        // console.log('Note saved successfully to storage');
 
         // Update badge count after creating a new note
         updateBadge();
@@ -58,7 +58,7 @@ export const createNewNote = async (activeTab) => {
         // After saving, send a message to the active tab to focus the new note.
         // The note element will be created by the onChanged listener in all tabs.
         if (activeTab && activeTab.id) {
-          console.log('Sending focus message to tab:', activeTab.id);
+          // console.log('Sending focus message to tab:', activeTab.id);
           chrome.tabs.sendMessage(
             activeTab.id,
             {
@@ -68,15 +68,15 @@ export const createNewNote = async (activeTab) => {
             (response) => {
               if (chrome.runtime.lastError) {
                 // Ignore errors, e.g., if the content script isn't ready.
-                console.log(
-                  'Content script not ready:',
-                  chrome.runtime.lastError.message,
-                );
+                // console.log(
+                //   'Content script not ready:',
+                //   chrome.runtime.lastError.message,
+                // );
               } else {
-                console.log(
-                  'Focus message sent successfully, response:',
-                  response,
-                );
+                // console.log(
+                //   'Focus message sent successfully, response:',
+                //   response,
+                // );
               }
             },
           );

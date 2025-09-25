@@ -7,7 +7,7 @@ import { handleDevicePixelRatio } from './modules/devicePixelRatio.js';
 initializeBadgeListeners();
 
 chrome.action.onClicked.addListener((tab) => {
-  console.log('Extension icon clicked, creating new note for tab:', tab.id);
+  // console.log('Extension icon clicked, creating new note for tab:', tab.id);
   createNewNote(tab);
 });
 
@@ -53,10 +53,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   // Handle badge setting update from options page
   if (message.action === 'update_badge_setting') {
-    console.log(
-      'Badge setting updated from options page:',
-      message.showBadgeCount,
-    );
+    // console.log(
+    //   'Badge setting updated from options page:',
+    //   message.showBadgeCount,
+    // );
     updateBadge();
   }
 });

@@ -84,12 +84,12 @@
         setUnifiedDpr(message.dpr);
         applyContainerScale();
       } else if (message.action === 'focus_note') {
-        console.log(`Received focus_note message for note: ${message.id}`);
+        // console.log(`Received focus_note message for note: ${message.id}`);
 
         const attemptMessageFocus = (attempt = 1) => {
-          console.log(
-            `Message focus attempt ${attempt} for note ${message.id}`,
-          );
+          // console.log(
+          //   `Message focus attempt ${attempt} for note ${message.id}`,
+          // );
 
           const shadowRoot = getShadowRoot();
           const noteElement = shadowRoot.querySelector(
@@ -98,31 +98,31 @@
 
           // Check if note is ready for focus
           if (noteElement && !noteElement.hasAttribute('data-ready')) {
-            console.log(
-              `Note ${message.id} not ready yet, marking for pending focus`,
-            );
+            // console.log(
+            //   `Note ${message.id} not ready yet, marking for pending focus`,
+            // );
             noteElement.setAttribute('data-pending-focus', 'true');
             return;
           }
 
           if (focusNote(message.id)) {
-            console.log(
-              `Message focus successful on attempt ${attempt} for note ${message.id}`,
-            );
+            // console.log(
+            //   `Message focus successful on attempt ${attempt} for note ${message.id}`,
+            // );
             return;
           }
 
           // Retry with increasing delays if focus failed
           if (attempt < 3) {
             const delay = attempt * 100; // 100ms, 200ms
-            console.log(
-              `Message focus failed, retrying in ${delay}ms for note ${message.id}`,
-            );
+            // console.log(
+            //   `Message focus failed, retrying in ${delay}ms for note ${message.id}`,
+            // );
             setTimeout(() => attemptMessageFocus(attempt + 1), delay);
           } else {
-            console.log(
-              `Message focus failed after ${attempt} attempts for note ${message.id}`,
-            );
+            // console.log(
+            //   `Message focus failed after ${attempt} attempts for note ${message.id}`,
+            // );
           }
         };
 
@@ -145,18 +145,18 @@
     // Handle storage changes and sync notes across tabs
     chrome.storage.onChanged.addListener((changes, namespace) => {
       try {
-        console.log(
-          'Storage change event received, namespace:',
-          namespace,
-          'changes:',
-          changes,
-        );
+        // console.log(
+        //   'Storage change event received, namespace:',
+        //   namespace,
+        //   'changes:',
+        //   changes,
+        // );
         if (changes.notes) {
-          console.log('Storage changed - notes updated');
+          // console.log('Storage changed - notes updated');
           const oldNotes = changes.notes.oldValue || {};
           const newNotes = changes.notes.newValue || {};
-          console.log('Old notes count:', Object.keys(oldNotes).length);
-          console.log('New notes count:', Object.keys(newNotes).length);
+          // console.log('Old notes count:', Object.keys(oldNotes).length);
+          // console.log('New notes count:', Object.keys(newNotes).length);
 
           // Update local notes and sync state
           setNotes(newNotes);
@@ -179,7 +179,7 @@
           for (const id in newNotes) {
             const noteData = newNotes[id];
             const oldNoteData = oldNotes[id];
-            console.log('Processing note:', id, 'data:', noteData);
+            // console.log('Processing note:', id, 'data:', noteData);
             updateNoteElement(id, noteData, oldNoteData);
           }
         }
@@ -209,9 +209,9 @@
     setupMouseEdgeDetection();
 
     // Add some debugging info
-    console.log('Sticky Bear content script loaded');
-    console.log('Chrome runtime available:', !!chrome.runtime);
-    console.log('Chrome storage available:', !!chrome.storage);
+    // console.log('Sticky Bear content script loaded');
+    // console.log('Chrome runtime available:', !!chrome.runtime);
+    // console.log('Chrome storage available:', !!chrome.storage);
 
     // Initialize the application
     initializeApp();

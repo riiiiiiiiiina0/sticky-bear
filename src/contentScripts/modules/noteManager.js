@@ -41,7 +41,7 @@ import {
 
 // Create a complete note element
 export const createNoteElement = (id, note) => {
-  console.log('createNoteElement called with ID:', id, 'note:', note);
+  // console.log('createNoteElement called with ID:', id, 'note:', note);
 
   const shadowRoot = getShadowRoot();
   const stickyNotesContainer = getStickyNotesContainer();
@@ -63,10 +63,10 @@ export const createNoteElement = (id, note) => {
   noteElement.classList.add(`color-${note.backgroundColor || 'yellow'}`);
   noteElement.setAttribute('data-id', id);
 
-  console.log(
-    'Note element created with classes:',
-    noteElement.classList.toString(),
-  );
+  // console.log(
+  //   'Note element created with classes:',
+  //   noteElement.classList.toString(),
+  // );
 
   // Apply edge-based positioning
   applyEdgePosition(noteElement, note);
@@ -150,7 +150,7 @@ export const createNoteElement = (id, note) => {
   // Note: document.activeElement won't work with shadow DOM, so we'll default to rendered view
   showRendered(editor, rendered);
 
-  console.log('✅ createNoteElement completed successfully for ID:', id);
+  // console.log('✅ createNoteElement completed successfully for ID:', id);
 };
 
 // Render all notes
@@ -173,7 +173,7 @@ export const updateNoteElement = (id, noteData, oldNoteData = {}) => {
 
   if (!noteElement) {
     // Note was added - create new element
-    console.log('Creating new note element for ID:', id);
+    // console.log('Creating new note element for ID:', id);
     createNoteElement(id, noteData);
 
     // Auto-focus newly created notes

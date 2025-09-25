@@ -24,18 +24,18 @@ export const focusNote = (id) => {
   const noteElement = shadowRoot.querySelector(`.sticky-note[data-id='${id}']`);
 
   if (document.visibilityState !== 'visible') {
-    console.log(`Document is not visible, skipping focus for note ${id}`);
+    // console.log(`Document is not visible, skipping focus for note ${id}`);
     return false;
   }
 
   if (!noteElement) {
-    console.log(`Note element not found for id: ${id}`);
+    // console.log(`Note element not found for id: ${id}`);
     return false;
   }
 
   // Check if the note is ready for focus
   if (!noteElement.hasAttribute('data-ready')) {
-    console.log(`Note ${id} not ready for focus yet`);
+    // console.log(`Note ${id} not ready for focus yet`);
     return false;
   }
 
@@ -85,9 +85,9 @@ export const focusNote = (id) => {
       try {
         contentDiv.focus();
         focused = true;
-        console.log(`Content div focused for note ${id}`);
+        // console.log(`Content div focused for note ${id}`);
       } catch (error) {
-        console.log(`Content div focus failed for note ${id}:`, error);
+        // console.log(`Content div focus failed for note ${id}:`, error);
       }
     }
   }
@@ -114,9 +114,9 @@ export const focusNote = (id) => {
         }
 
         focused = true;
-        console.log(`Simulated click and focus worked for note ${id}`);
+        // console.log(`Simulated click and focus worked for note ${id}`);
       } catch (error) {
-        console.log(`Simulated click failed for note ${id}:`, error);
+        // console.log(`Simulated click failed for note ${id}:`, error);
       }
     }
   }
