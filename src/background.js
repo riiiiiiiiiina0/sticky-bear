@@ -33,29 +33,10 @@ chrome.runtime.onInstalled.addListener((details) => {
   updateBadge();
 
   if (details.reason === 'install' || details.reason === 'update') {
-    // Helper that determines whether a tab should be reloaded
-    const shouldReloadTab = async (tab) => {
-      // Skip internal browser pages
-      if (
-        !tab.url ||
-        tab.url.startsWith('chrome://') ||
-        tab.url.startsWith('edge://')
-      ) {
-        return false;
-      }
-
-      // Do not reload if the tab is currently producing audio
-      if (tab.audible) {
-        return false;
-      }
-
-      return true;
-    };
-
     (async () => {
       const tabs = await chrome.tabs.query({});
       for (const tab of tabs) {
-        if (tab.id && (await shouldReloadTab(tab))) {
+        if (tab.id) {
           chrome.tabs.reload(tab.id);
         }
       }
