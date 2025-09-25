@@ -8,10 +8,15 @@ import {
   setActivelyEditing,
   debouncedSaveNotes,
 } from './storage.js';
-import { removeNoteElement, updateHeaderText, clearHeaderText } from './ui.js';
+import {
+  removeNoteElement,
+  updateHeaderText,
+  clearHeaderText,
+  bringToFront,
+} from './ui.js';
 import { getFirstLineForHeader } from './utils.js';
 import { showEditor, showRendered } from './rendering.js';
-import { getIsDragging } from './positioning.js';
+import { getIsDragging, applyEdgePosition } from './positioning.js';
 
 // Focus management
 export const focusNote = (id) => {
@@ -345,6 +350,71 @@ export const setupGlobalEvents = () => {
         // Blur editor and let other Escape handlers run
         e.preventDefault();
         /** @type {HTMLElement} */ (activeEl).blur();
+        return;
+      }
+
+      // Alt + ArrowLeft/ArrowRight: snap note 10px from left/right edge
+      if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const noteElement = activeEl.closest('.sticky-note');
+        if (!noteElement) return;
+        const id = noteElement.getAttribute('data-id');
+        if (!id) return;
+
+        const notes = getNotes();
+        if (!notes[id]) return;
+
+        // Compute stacking top based on existing notes already occupying the target edge/offset
+        const srAll = getShadowRoot();
+        let newTopPx = null;
+        try {
+          const all = Array.from(srAll.querySelectorAll('.sticky-note'));
+          const desiredOffset = '10px';
+          const isLeft = e.key === 'ArrowLeft';
+          let maxBottom = -1;
+          for (const el of all) {
+            if (el === noteElement) continue;
+            const elLeft = /** @type {HTMLElement} */ (el).style.left;
+            const elRight = /** @type {HTMLElement} */ (el).style.right;
+            const matches = isLeft
+              ? elLeft === desiredOffset
+              : elRight === desiredOffset;
+            if (!matches) continue;
+            const topVal =
+              parseInt(/** @type {HTMLElement} */ (el).style.top) || 0;
+            const heightVal =
+              parseInt(/** @type {HTMLElement} */ (el).style.height) ||
+              parseInt(window.getComputedStyle(el).height) ||
+              200;
+            const bottom = topVal + heightVal;
+            if (bottom > maxBottom) maxBottom = bottom;
+          }
+          if (maxBottom >= 0) {
+            newTopPx = maxBottom + 10 + 'px';
+          }
+        } catch {}
+
+        if (e.key === 'ArrowLeft') {
+          notes[id].edge = 'left';
+          notes[id].left = '10px';
+          notes[id].right = null;
+        } else if (e.key === 'ArrowRight') {
+          notes[id].edge = 'right';
+          notes[id].right = '10px';
+          notes[id].left = null;
+        }
+
+        if (newTopPx !== null) {
+          notes[id].top = newTopPx;
+        }
+
+        // Apply to DOM
+        applyEdgePosition(noteElement, notes[id]);
+        debouncedSaveNotes();
+        // Bring to front (top-most z-index)
+        bringToFront(id);
         return;
       }
     } catch {}
