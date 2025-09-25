@@ -1,15 +1,14 @@
 // notes.js - Module for handling note creation and management
 
-import { findNonOverlappingPosition } from './positioning.js';
 import { updateBadge } from './badge.js';
 
 // Function to create a new note
 export const createNewNote = async (activeTab) => {
   const newNoteId = Date.now().toString();
 
-  // Use a more reliable fallback approach
-  const createNoteWithPosition = (viewportWidth = 1400) => {
-    console.log('Creating note with viewport width:', viewportWidth);
+  // Create a note at a fixed initial position and bring it to front
+  const createNoteWithPosition = () => {
+    console.log('Creating note at fixed initial position (20px, 20px)');
 
     chrome.storage.sync.get({ notes: {} }, (data) => {
       if (chrome.runtime.lastError) {
@@ -21,14 +20,20 @@ export const createNewNote = async (activeTab) => {
       console.log('Current notes in storage:', Object.keys(notes).length);
       console.log('Existing notes data:', notes);
 
-      // Find a non-overlapping position
-      const position = findNonOverlappingPosition(notes, viewportWidth);
-      console.log('Calculated position for new note:', position);
+      // Compute z-index so the new note appears on top
+      const maxZ = Object.values(notes).reduce((m, n) => {
+        const z = n && n.zIndex !== undefined ? parseInt(n.zIndex, 10) : 0;
+        return isNaN(z) ? m : Math.max(m, z);
+      }, 0);
+      const nextZ = maxZ + 1;
 
       const newNote = {
         content: '',
-        left: position.left,
-        top: position.top,
+        left: '20px',
+        top: '20px',
+        right: null,
+        edge: 'left',
+        zIndex: nextZ,
       };
 
       notes[newNoteId] = newNote;
@@ -89,13 +94,12 @@ export const createNewNote = async (activeTab) => {
       currentWindow: true,
     });
 
-    // Use tab width if available, otherwise use default
-    const viewportWidth = tab && tab.width ? tab.width : 1400;
-    createNoteWithPosition(viewportWidth);
+    // Create at fixed initial position regardless of tab width
+    createNoteWithPosition();
   } catch (error) {
     console.error('Error getting tab info:', error);
-    // Fallback to default positioning if there's an error
-    createNoteWithPosition(1400);
+    // Fallback to fixed position if there's an error
+    createNoteWithPosition();
   }
 };
 
@@ -103,12 +107,20 @@ export const createNewNote = async (activeTab) => {
 export const createNoteWithFallback = (newNoteId, activeTab) => {
   chrome.storage.sync.get({ notes: {} }, (data) => {
     const notes = data.notes;
-    const position = findNonOverlappingPosition(notes, 1400); // Default fallback width
+    // Compute z-index so the new note appears on top
+    const maxZ = Object.values(notes).reduce((m, n) => {
+      const z = n && n.zIndex !== undefined ? parseInt(n.zIndex, 10) : 0;
+      return isNaN(z) ? m : Math.max(m, z);
+    }, 0);
+    const nextZ = maxZ + 1;
 
     const newNote = {
       content: '',
-      left: position.left,
-      top: position.top,
+      left: '20px',
+      top: '20px',
+      right: null,
+      edge: 'left',
+      zIndex: nextZ,
     };
 
     notes[newNoteId] = newNote;
