@@ -413,11 +413,24 @@ export const CSS_CONTENT = `.sticky-notes-container {
 
   /* Dark mode background color variants */
   .sticky-note.color-yellow {
-    background-color: rgba(80, 80, 40, 0.85);
+    background-color: rgba(255, 235, 59, 0.85);
+    color: #000;
   }
 
   .sticky-note.color-yellow .sticky-note-header {
-    background-color: rgba(100, 100, 50, 0.95);
+    background-color: rgba(255, 213, 79, 0.95);
+  }
+
+  .sticky-note.color-yellow .header-text {
+    color: #333;
+  }
+
+  .sticky-note.color-yellow .sticky-note-content .sticky-note-editor {
+    color: #000;
+  }
+
+  .sticky-note.color-yellow .sticky-note-content .sticky-note-rendered {
+    color: #000;
   }
 
   .sticky-note.color-green {
