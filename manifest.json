@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Sticky Bear",
-  "version": "1.17",
+  "version": "1.18",
   "description": "Create and manage sticky notes across all tabs and pages.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAttFoi4VorGXMVV/84/fOv4LFogGgyYqxSADI/O+nHScuRwHOxwdTcsliHTB1WOYcfGW2sappS159q5GqGW0GpH82bURR8HjM9F6WUEk44S8jrobhayp5Ku2ir27XDKhvou4JfT6b8hNqKJ4ZGJAd7cTrC23uQX48LMlF6pYEBdUgWCrrW2zOO4zv/c6l6qVQK6aslwutXsAlcc+GrO1IfZmPKuP+sZurwwd0yySkEmYM+TQQJA5SM7mimAKmvc/I31YNfGSI3afoiyfZcj4G8MLePFOZWyQIPhEWkxuP6WATvz5dlyfy+D7oL2LbFkR9HOBKwN7ainULIS0QKqswhwIDAQAB",
   "icons": {
