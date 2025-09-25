@@ -236,8 +236,53 @@ export const expandNoteToContent = (id) => {
 
 // Delete note handler
 export const handleDeleteNote = (id) => {
-  deleteNote(id);
-  removeNoteElement(id);
+  try {
+    const shadowRoot = getShadowRoot();
+    let nextId = null;
+
+    if (shadowRoot) {
+      const noteElements = Array.from(
+        shadowRoot.querySelectorAll('.sticky-note'),
+      );
+      const currentEl = shadowRoot.querySelector(
+        `.sticky-note[data-id='${id}']`,
+      );
+      const currentIndex = currentEl ? noteElements.indexOf(currentEl) : -1;
+
+      if (noteElements.length > 1 && currentIndex !== -1) {
+        const nextIndex = (currentIndex + 1) % noteElements.length;
+        const candidate = /** @type {HTMLElement} */ (noteElements[nextIndex]);
+        const candidateId = candidate.getAttribute('data-id');
+        if (candidateId && candidateId !== id) {
+          nextId = candidateId;
+        } else if (noteElements.length > 2) {
+          // Fallback: try previous if wrap selects the same
+          const prevIndex =
+            (currentIndex - 1 + noteElements.length) % noteElements.length;
+          const prev = /** @type {HTMLElement} */ (noteElements[prevIndex]);
+          const prevId = prev.getAttribute('data-id');
+          if (prevId && prevId !== id) {
+            nextId = prevId;
+          }
+        }
+      }
+    }
+
+    deleteNote(id);
+    removeNoteElement(id);
+
+    if (nextId) {
+      // Slight delay to ensure DOM updates settle
+      setTimeout(() => {
+        try {
+          focusNote(nextId);
+        } catch {}
+      }, 10);
+    }
+  } catch {
+    deleteNote(id);
+    removeNoteElement(id);
+  }
 };
 
 // Setup global event listeners
