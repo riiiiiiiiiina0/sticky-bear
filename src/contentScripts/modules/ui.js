@@ -8,6 +8,7 @@ import {
   initializeStickyNotesContainer,
 } from './dom.js';
 import { getNotes, updateNoteContent, debouncedSaveNotes } from './storage.js';
+import { applyLiquidGlassEffect } from './liquidGlass.js';
 
 // Create color dropdown component
 export const createColorDropdown = (noteId, currentColor) => {
@@ -97,6 +98,9 @@ export const changeNoteColor = (noteId, newColor) => {
       }
     });
   }
+
+  // Apply liquid glass effect with new color
+  applyLiquidGlassEffect(noteElement, newColor);
 
   // Save the changes
   debouncedSaveNotes();

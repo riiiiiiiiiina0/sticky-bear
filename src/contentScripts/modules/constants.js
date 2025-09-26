@@ -40,8 +40,7 @@ export const CSS_CONTENT = `.sticky-notes-container {
   width: 200px;
   height: 200px;
   color: #000;
-  background-color: rgba(255, 255, 204, 0.85);
-  backdrop-filter: blur(4px);
+  /* Liquid glass effect will be applied via JavaScript */
   box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
   border-radius: 10px;
   overflow: visible;
@@ -170,41 +169,22 @@ export const CSS_CONTENT = `.sticky-notes-container {
   border-width: 2px;
 }
 
-/* Background color variants */
-.sticky-note.color-yellow {
-  background-color: rgba(255, 255, 204, 0.85);
-}
-
+/* Color variants - liquid glass effect applied via JavaScript */
+/* Header colors for different note variants */
 .sticky-note.color-yellow .sticky-note-header {
   background-color: rgba(240, 240, 180, 0.95);
-}
-
-.sticky-note.color-green {
-  background-color: rgba(144, 238, 144, 0.85);
 }
 
 .sticky-note.color-green .sticky-note-header {
   background-color: rgba(120, 200, 120, 0.95);
 }
 
-.sticky-note.color-blue {
-  background-color: rgba(204, 229, 255, 0.85);
-}
-
 .sticky-note.color-blue .sticky-note-header {
   background-color: rgba(180, 210, 240, 0.95);
 }
 
-.sticky-note.color-red {
-  background-color: rgba(255, 204, 204, 0.85);
-}
-
 .sticky-note.color-red .sticky-note-header {
   background-color: rgba(240, 180, 180, 0.95);
-}
-
-.sticky-note.color-gray {
-  background-color: rgba(230, 230, 230, 0.85);
 }
 
 .sticky-note.color-gray .sticky-note-header {
@@ -346,8 +326,7 @@ export const CSS_CONTENT = `.sticky-notes-container {
 /* Dark Mode Styles */
 @media (prefers-color-scheme: dark) {
   .sticky-note {
-    background-color: rgba(42, 42, 42, 0.85);
-    backdrop-filter: blur(4px);
+    /* Liquid glass effect applied via JavaScript */
     color: #eee;
   }
 
@@ -411,9 +390,8 @@ export const CSS_CONTENT = `.sticky-notes-container {
     border-color: #ccc;
   }
 
-  /* Dark mode background color variants */
+  /* Dark mode color variants - liquid glass effect applied via JavaScript */
   .sticky-note.color-yellow {
-    background-color: rgba(255, 235, 59, 0.85);
     color: #000;
   }
 
@@ -433,32 +411,16 @@ export const CSS_CONTENT = `.sticky-notes-container {
     color: #000;
   }
 
-  .sticky-note.color-green {
-    background-color: rgba(34, 68, 34, 0.85);
-  }
-
   .sticky-note.color-green .sticky-note-header {
     background-color: rgba(44, 88, 44, 0.95);
-  }
-
-  .sticky-note.color-blue {
-    background-color: rgba(40, 60, 80, 0.85);
   }
 
   .sticky-note.color-blue .sticky-note-header {
     background-color: rgba(50, 75, 100, 0.95);
   }
 
-  .sticky-note.color-red {
-    background-color: rgba(80, 40, 40, 0.85);
-  }
-
   .sticky-note.color-red .sticky-note-header {
     background-color: rgba(100, 50, 50, 0.95);
-  }
-
-  .sticky-note.color-gray {
-    background-color: rgba(60, 60, 60, 0.85);
   }
 
   .sticky-note.color-gray .sticky-note-header {

@@ -38,6 +38,10 @@ import {
   handleDeleteNote,
   focusNote,
 } from './events.js';
+import {
+  applyLiquidGlassEffect,
+  updateLiquidGlassOnResize,
+} from './liquidGlass.js';
 
 // Create a complete note element
 export const createNoteElement = (id, note) => {
@@ -150,6 +154,9 @@ export const createNoteElement = (id, note) => {
   // Note: document.activeElement won't work with shadow DOM, so we'll default to rendered view
   showRendered(editor, rendered);
 
+  // Apply liquid glass effect
+  applyLiquidGlassEffect(noteElement, note.backgroundColor || 'yellow');
+
   // console.log('✅ createNoteElement completed successfully for ID:', id);
 };
 
@@ -251,6 +258,9 @@ export const updateNoteElement = (id, noteData, oldNoteData = {}) => {
         optionElement.classList.add('selected');
       }
     });
+
+    // Apply liquid glass effect with new color
+    applyLiquidGlassEffect(noteElement, noteData.backgroundColor || 'yellow');
   }
 
   // Update content if needed (avoid conflicts with active editing)

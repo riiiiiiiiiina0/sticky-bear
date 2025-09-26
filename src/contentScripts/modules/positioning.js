@@ -2,6 +2,7 @@
 
 import { getShadowRoot, getUnifiedDpr } from './dom.js';
 import { getNotes, debouncedSaveNotes } from './storage.js';
+import { updateLiquidGlassOnResize } from './liquidGlass.js';
 
 let isDragging = false;
 
@@ -392,6 +393,9 @@ export const makeResizable = (element, resizeHandle) => {
       notes[id].width = element.style.width;
       notes[id].height = element.style.height;
       debouncedSaveNotes();
+
+      // Update liquid glass effect with new dimensions
+      updateLiquidGlassOnResize(element, notes[id].backgroundColor || 'yellow');
     }
   }
 };
