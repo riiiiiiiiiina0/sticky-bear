@@ -21,7 +21,12 @@
   "content_scripts": [
     {
       "matches": [
-        "<all_urls>"
+        "<all_urls>",
+        "https://*/*",
+        "http://*/*"
+      ],
+      "exclude_matches": [
+        "https://accounts.google.com/*"
       ],
       "js": [
         "libs/marked@16.3.0.js",
