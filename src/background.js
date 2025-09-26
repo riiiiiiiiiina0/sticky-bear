@@ -3,11 +3,18 @@ import { createNewNote, deleteFocusedNote } from './modules/notes.js';
 import { updateBadge, initializeBadgeListeners } from './modules/badge.js';
 import { handleDevicePixelRatio } from './modules/devicePixelRatio.js';
 
+// Only allow creating notes on http/https pages
+const isHttpTab = (tab) => {
+  const url = (tab && tab.url) || '';
+  return url.startsWith('http://') || url.startsWith('https://');
+};
+
 // Initialize badge listeners
 initializeBadgeListeners();
 
 chrome.action.onClicked.addListener((tab) => {
   // console.log('Extension icon clicked, creating new note for tab:', tab.id);
+  if (!isHttpTab(tab)) return;
   createNewNote(tab);
 });
 
@@ -19,6 +26,7 @@ chrome.commands.onCommand.addListener((command) => {
 
     switch (command) {
       case 'create-new-note':
+        if (!isHttpTab(activeTab)) return;
         createNewNote(activeTab);
         break;
       case 'delete-focused-note':
