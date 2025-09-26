@@ -491,6 +491,8 @@ export const setupGlobalEvents = () => {
 // Mouse edge detection for toggling sticky notes collapse
 let isNearLeftEdge = false; // Track if mouse is currently near left edge
 let isNearRightEdge = false; // Track if mouse is currently near right edge
+let leftEdgeCollapseTimeout = null; // Track timeout for left edge collapse
+let rightEdgeCollapseTimeout = null; // Track timeout for right edge collapse
 
 export const setupMouseEdgeDetection = () => {
   const handleMouseMove = (e) => {
@@ -512,18 +514,29 @@ export const setupMouseEdgeDetection = () => {
 
       if (stickyNotesContainer) {
         if (stickyNotesContainer.classList.contains('collapsed')) {
+          // Immediately expand if collapsed
           stickyNotesContainer.classList.remove('collapsed');
           setTimeout(
             () => stickyNotesContainer.classList.remove('collapsing'),
             300,
           );
         } else {
-          stickyNotesContainer.classList.add('collapsed');
-          stickyNotesContainer.classList.add('collapsing');
+          // Set timeout to collapse after 1 second
+          leftEdgeCollapseTimeout = setTimeout(() => {
+            if (isNearLeftEdge && stickyNotesContainer) {
+              stickyNotesContainer.classList.add('collapsed');
+              stickyNotesContainer.classList.add('collapsing');
+            }
+          }, 1000);
         }
       }
     } else if (!isCurrentlyNearLeftEdge && isNearLeftEdge) {
       isNearLeftEdge = false;
+      // Clear the collapse timeout if mouse leaves the edge
+      if (leftEdgeCollapseTimeout) {
+        clearTimeout(leftEdgeCollapseTimeout);
+        leftEdgeCollapseTimeout = null;
+      }
     }
 
     // Handle right edge
@@ -532,18 +545,29 @@ export const setupMouseEdgeDetection = () => {
 
       if (stickyNotesContainer) {
         if (stickyNotesContainer.classList.contains('collapsed')) {
+          // Immediately expand if collapsed
           stickyNotesContainer.classList.remove('collapsed');
           setTimeout(
             () => stickyNotesContainer.classList.remove('collapsing'),
             300,
           );
         } else {
-          stickyNotesContainer.classList.add('collapsed');
-          stickyNotesContainer.classList.add('collapsing');
+          // Set timeout to collapse after 1 second
+          rightEdgeCollapseTimeout = setTimeout(() => {
+            if (isNearRightEdge && stickyNotesContainer) {
+              stickyNotesContainer.classList.add('collapsed');
+              stickyNotesContainer.classList.add('collapsing');
+            }
+          }, 1000);
         }
       }
     } else if (!isCurrentlyNearRightEdge && isNearRightEdge) {
       isNearRightEdge = false;
+      // Clear the collapse timeout if mouse leaves the edge
+      if (rightEdgeCollapseTimeout) {
+        clearTimeout(rightEdgeCollapseTimeout);
+        rightEdgeCollapseTimeout = null;
+      }
     }
   };
 
