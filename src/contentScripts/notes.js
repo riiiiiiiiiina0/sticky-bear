@@ -158,6 +158,22 @@
           // console.log('Old notes count:', Object.keys(oldNotes).length);
           // console.log('New notes count:', Object.keys(newNotes).length);
 
+          // If any note reports a raw position of [0, 0], ignore this change
+          try {
+            const hasZeroZeroPosition = Object.values(newNotes).some((note) => {
+              const pos = /** @type {any} */ (note)?.position;
+              return (
+                Array.isArray(pos) &&
+                pos.length === 2 &&
+                pos[0] === 0 &&
+                pos[1] === 0
+              );
+            });
+            if (hasZeroZeroPosition) {
+              return;
+            }
+          } catch {}
+
           // Update local notes and sync state
           setNotes(newNotes);
 
